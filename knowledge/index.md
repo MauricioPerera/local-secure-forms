@@ -21,3 +21,4 @@ status: draft
 - [Guía UX](../UX-GUIDE.md)
 - [Guía de estilos](../STYLE-GUIDE.md)
 - [Contrato del Objetivo 5](contracts/sprint5-ux-style.md)
+- [Contrato del Objetivo 6](contracts/sprint6-reference-sdk.md)
