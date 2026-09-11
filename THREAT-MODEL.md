@@ -14,6 +14,8 @@
 - Un formulario falso solicita más datos de los necesarios.
 - Una respuesta de error devuelve información sensible.
 - Un proceso local malicioso observa la máquina del usuario.
+- Un agente intenta elevar el riesgo o reutilizar una confirmación anterior.
+- Un borrado aparentemente reversible termina siendo permanente sin aviso.
 
 ## Mitigaciones
 
@@ -25,6 +27,10 @@
 - Exigir confirmación humana independiente.
 - Usar códigos de error estables y sanitizados.
 - Probar explícitamente ausencia de secretos en argv, logs y salidas.
+- Asociar cada operación con un nivel de riesgo y una confirmación no
+  delegable al agente.
+- Separar `soft_delete`, `restore` y `purge`, con controles crecientes.
+- Expirar solicitudes, PIN y códigos de segundo factor para impedir replay.
 
 ## Límites
 

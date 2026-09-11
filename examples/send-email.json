@@ -1,0 +1,15 @@
+{
+  "operation": "send_email",
+  "purpose": "Enviar un correo preparado por el usuario",
+  "risk": "high",
+  "initiator": "agent",
+  "fields": [
+    {"name": "account_ref", "type": "opaque_reference", "sensitivity": "private", "required": true},
+    {"name": "to", "type": "email_list", "sensitivity": "private", "required": true},
+    {"name": "subject", "type": "text", "sensitivity": "private", "required": true},
+    {"name": "body", "type": "multiline", "sensitivity": "private", "required": true}
+  ],
+  "validation": {"preflight": "recipient_and_draft_review"},
+  "confirmation": {"method": "pin", "required": true, "summary": "to, subject"},
+  "expires_in_seconds": 300
+}

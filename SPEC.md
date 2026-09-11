@@ -1,4 +1,4 @@
-# LSFA Specification 0.1
+# LSFA Specification 0.2
 
 ## Propósito
 
@@ -75,6 +75,38 @@ requiere confirmación humana independiente del agente.
 
 Cerrar el formulario equivale a `cancelled`, no a aceptar.
 
+## Niveles de riesgo y confirmación
+
+Toda solicitud puede declarar `risk` como `low`, `medium`, `high` o
+`irreversible`. El cliente debe mostrar el riesgo y la acción concreta antes
+de ejecutar cualquier efecto externo. Las acciones de alto riesgo requieren
+PIN local; las irreversibles requieren además un segundo factor configurado
+por el usuario, como TOTP. El agente nunca puede confirmar, ver el PIN o
+recibir el código.
+
+La interfaz puede ofrecer un botón `Sí, confirmar` para reducir fricción,
+pero debe mostrar operación, destino y alcance en el mismo paso. Toda
+confirmación expira y no puede reutilizarse.
+
+## Acciones reversibles
+
+Las operaciones que lo permitan deben implementar `soft_delete` y `restore`.
+El borrado permanente (`purge`) debe ser una operación separada, declarar
+`risk: irreversible` y requerir confirmación reforzada.
+
+## Resultado estructurado
+
+El cliente puede devolver `request_id`, `risk`, `checks`, `stored_refs` y
+`error_code`, además de `status` y `operation`. `stored_refs` contiene solo
+identificadores opacos o estados de existencia; nunca secretos, PIN, tokens,
+códigos ni valores completos de campos sensibles.
+
+## Integración manual y asistida
+
+El mismo contrato funciona cuando el usuario inicia el formulario manualmente
+o cuando un agente solicita abrirlo. Un entorno sin UI puede usar terminal o
+configuración manual, manteniendo las mismas validaciones y confirmaciones.
+
 ## Requisitos de conformidad
 
 Una implementación conforme debe demostrar que:
@@ -86,3 +118,5 @@ Una implementación conforme debe demostrar que:
 5. Ofrece fallback terminal o headless sin degradar silenciosamente la seguridad.
 6. Mantiene confirmación humana para acciones sensibles o irreversibles.
 7. Puede devolver presencia o estado del secreto sin devolver su contenido.
+8. Declara el nivel de riesgo y aplica el método de confirmación correspondiente.
+9. Separa las operaciones reversibles de las irreversibles y permite cancelar.
