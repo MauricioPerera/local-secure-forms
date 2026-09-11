@@ -1,0 +1,15 @@
+{
+  "operation": "connect_email",
+  "purpose": "Configurar una cuenta IMAP/SMTP",
+  "presentation": "auto",
+  "fields": [
+    {"name": "email", "type": "email", "sensitivity": "private", "required": true},
+    {"name": "password", "type": "secret", "sensitivity": "secret", "required": true},
+    {"name": "imap_host", "type": "hostname", "sensitivity": "public", "required": true},
+    {"name": "imap_port", "type": "integer", "sensitivity": "public", "default": 993},
+    {"name": "smtp_host", "type": "hostname", "sensitivity": "public", "required": true},
+    {"name": "smtp_port", "type": "integer", "sensitivity": "public", "default": 465}
+  ],
+  "validation": {"preflight": "imap_auth_and_smtp_auth"},
+  "expires_in_seconds": 600
+}
