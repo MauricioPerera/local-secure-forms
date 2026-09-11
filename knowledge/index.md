@@ -18,3 +18,6 @@ status: draft
 - [Contrato del Objetivo 3](contracts/sprint3-risk-confirmation.md)
 - [Ciclo de vida](../specs/lsfa-lifecycle.md)
 - [Contrato del Objetivo 4](contracts/sprint4-reversible-actions.md)
+- [Guía UX](../UX-GUIDE.md)
+- [Guía de estilos](../STYLE-GUIDE.md)
+- [Contrato del Objetivo 5](contracts/sprint5-ux-style.md)
