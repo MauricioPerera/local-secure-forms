@@ -1,0 +1,12 @@
+{
+  "operation": "soft_delete",
+  "purpose": "Mover un recurso a la papelera para permitir su recuperación",
+  "risk": "medium",
+  "initiator": "agent",
+  "fields": [
+    {"name": "resource_ref", "type": "opaque_reference", "sensitivity": "private", "required": true}
+  ],
+  "validation": {"preflight": "resource_exists_and_is_recoverable"},
+  "confirmation": {"method": "user_accept", "required": true},
+  "expires_in_seconds": 300
+}

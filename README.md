@@ -27,6 +27,8 @@ guardar la credencial sin devolver la contraseña al agente.
 - [SECURITY.md](SECURITY.md): reglas de seguridad para implementaciones.
 - [examples/connect-email.json](examples/connect-email.json): solicitud de ejemplo.
 - [examples/send-email.json](examples/send-email.json): acción con confirmación de alto riesgo.
+- `python scripts/validate_examples.py`: valida los ejemplos contra el esquema mínimo.
+- [RELEASE-v0.2.md](RELEASE-v0.2.md): notas de la versión experimental 0.2.
 
 ## Estado
 
