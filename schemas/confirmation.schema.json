@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://local-secure-forms.dev/schemas/confirmation.schema.json",
+  "title": "LSFA Confirmation",
+  "type": "object",
+  "required": ["method", "required"],
+  "additionalProperties": false,
+  "properties": {
+    "method": {"enum": ["user_accept", "pin", "pin_and_totp"]},
+    "required": {"type": "boolean"},
+    "summary": {"type": "array", "items": {"type": "string", "minLength": 1}},
+    "request_id": {"type": "string", "pattern": "^[A-Za-z0-9._-]{1,128}$"},
+    "expires_at": {"type": "string", "format": "date-time"},
+    "single_use": {"const": true}
+  }
+}
