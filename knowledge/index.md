@@ -28,3 +28,6 @@ status: draft
 - [Contrato del Objetivo 8](contracts/sprint8-email-integration.md)
 - [Kit de conformidad](../CONFORMANCE.md)
 - [Contrato del Objetivo 9](contracts/sprint9-conformance-kit.md)
+- [Guía de implementación pública](../IMPLEMENTATION-GUIDE.md)
+- [Contribuir y reportar feedback](../CONTRIBUTING.md)
+- [Contrato del Objetivo 10](contracts/sprint10-public-proposal.md)

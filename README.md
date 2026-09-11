@@ -25,6 +25,9 @@ guardar la credencial sin devolver la contraseña al agente.
 - [SPEC.md](SPEC.md): protocolo y requisitos de conformidad.
 - [THREAT-MODEL.md](THREAT-MODEL.md): límites, amenazas y mitigaciones.
 - [SECURITY.md](SECURITY.md): reglas de seguridad para implementaciones.
+- [IMPLEMENTATION-GUIDE.md](IMPLEMENTATION-GUIDE.md): ruta de adopción para implementadores.
+- [CONTRIBUTING.md](CONTRIBUTING.md): reglas para contribuir al protocolo.
+- [FEEDBACK.md](FEEDBACK.md): preguntas y canal para retroalimentación.
 - [examples/connect-email.json](examples/connect-email.json): solicitud de ejemplo.
 - [examples/send-email.json](examples/send-email.json): acción con confirmación de alto riesgo.
 - `python scripts/validate_examples.py`: valida los ejemplos contra el esquema mínimo.
