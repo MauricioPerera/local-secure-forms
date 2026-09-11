@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://local-secure-forms.dev/schemas/result.schema.json",
+  "title": "LSFA Result",
+  "type": "object",
+  "required": ["status", "operation"],
+  "additionalProperties": false,
+  "properties": {
+    "status": {"enum": ["accepted", "declined", "cancelled", "invalid", "failed", "expired"]},
+    "operation": {"type": "string", "minLength": 1},
+    "request_id": {"type": "string", "pattern": "^[A-Za-z0-9._-]{1,128}$"},
+    "risk": {"enum": ["low", "medium", "high", "irreversible"]},
+    "checks": {"type": "object"},
+    "stored_refs": {"type": "object"},
+    "error_code": {"type": "string", "pattern": "^[a-z0-9_.-]{1,64}$"}
+  }
+}
