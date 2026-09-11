@@ -7,6 +7,7 @@ from .core import (
     LSFAResult,
     RiskLevel,
 )
+from .adapters import GuiAdapter, ManualAdapter, PresentationResult, TerminalAdapter
 
 __all__ = [
     "ConfirmationPolicy",
@@ -14,4 +15,8 @@ __all__ = [
     "LSFARequest",
     "LSFAResult",
     "RiskLevel",
+    "GuiAdapter",
+    "ManualAdapter",
+    "PresentationResult",
+    "TerminalAdapter",
 ]

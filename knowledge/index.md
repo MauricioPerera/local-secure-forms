@@ -22,3 +22,5 @@ status: draft
 - [Guía de estilos](../STYLE-GUIDE.md)
 - [Contrato del Objetivo 5](contracts/sprint5-ux-style.md)
 - [Contrato del Objetivo 6](contracts/sprint6-reference-sdk.md)
+- [Adaptadores de presentación](../specs/lsfa-presentation.md)
+- [Contrato del Objetivo 7](contracts/sprint7-presentation-adapters.md)
