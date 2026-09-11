@@ -16,3 +16,5 @@ status: draft
 - [Contrato del Objetivo 2](contracts/sprint2-protocol-base.md)
 - [Riesgo y confirmación](../specs/lsfa-confirmation.md)
 - [Contrato del Objetivo 3](contracts/sprint3-risk-confirmation.md)
+- [Ciclo de vida](../specs/lsfa-lifecycle.md)
+- [Contrato del Objetivo 4](contracts/sprint4-reversible-actions.md)
