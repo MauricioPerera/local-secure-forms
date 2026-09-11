@@ -1,0 +1,16 @@
+{
+  "operation": "extract_attachment",
+  "purpose": "Guardar localmente un adjunto seleccionado por el usuario",
+  "risk": "medium",
+  "initiator": "agent",
+  "presentation": "auto",
+  "fields": [
+    {"name": "account_ref", "type": "opaque_reference", "sensitivity": "private", "required": true},
+    {"name": "message_ref", "type": "opaque_reference", "sensitivity": "private", "required": true},
+    {"name": "attachment_ref", "type": "opaque_reference", "sensitivity": "private", "required": true},
+    {"name": "destination", "type": "safe_local_path", "sensitivity": "private", "required": true}
+  ],
+  "validation": {"preflight": "attachment_reference_and_destination"},
+  "confirmation": {"method": "user_accept", "required": true, "single_use": true},
+  "expires_in_seconds": 300
+}

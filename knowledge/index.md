@@ -31,3 +31,5 @@ status: draft
 - [Guía de implementación pública](../IMPLEMENTATION-GUIDE.md)
 - [Contribuir y reportar feedback](../CONTRIBUTING.md)
 - [Contrato del Objetivo 10](contracts/sprint10-public-proposal.md)
+- [Extensión de adjuntos](../specs/lsfa-attachments.md)
+- [Contrato del Objetivo 12](contracts/sprint12-attachments.md)
