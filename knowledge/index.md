@@ -24,3 +24,5 @@ status: draft
 - [Contrato del Objetivo 6](contracts/sprint6-reference-sdk.md)
 - [Adaptadores de presentación](../specs/lsfa-presentation.md)
 - [Contrato del Objetivo 7](contracts/sprint7-presentation-adapters.md)
+- [Integración con correo](../specs/lsfa-email-integration.md)
+- [Contrato del Objetivo 8](contracts/sprint8-email-integration.md)
