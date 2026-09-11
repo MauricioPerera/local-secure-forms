@@ -26,3 +26,5 @@ status: draft
 - [Contrato del Objetivo 7](contracts/sprint7-presentation-adapters.md)
 - [Integración con correo](../specs/lsfa-email-integration.md)
 - [Contrato del Objetivo 8](contracts/sprint8-email-integration.md)
+- [Kit de conformidad](../CONFORMANCE.md)
+- [Contrato del Objetivo 9](contracts/sprint9-conformance-kit.md)
