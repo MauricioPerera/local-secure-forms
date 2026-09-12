@@ -56,3 +56,32 @@ def test_terminal_states_cannot_be_replayed(tmp_path, state):
     assert store.status('r') == state
     with pytest.raises(AuthorizationError):
         store.consume('r', BINDING, 111)
+
+
+def test_competing_processes_claim_only_once(tmp_path):
+    path = tmp_path / 'process-race.sqlite'
+    store = AuthorizationStore(path)
+    store.issue('r', BINDING, 200, 100)
+    code = '''
+import sys
+from src.lsfa.authorization import AuthorizationStore, AuthorizationError
+store = AuthorizationStore(sys.argv[1])
+try:
+    store.consume('r', 'a'*64, 110)
+except AuthorizationError:
+    raise SystemExit(2)
+store.finish('r', 'accepted')
+'''
+    processes = []
+    try:
+        for _ in range(8):
+            processes.append(subprocess.Popen([sys.executable, '-c', code, str(path)]))
+        codes = [process.wait(timeout=20) for process in processes]
+        assert codes.count(0) == 1
+        assert codes.count(2) == 7
+        assert store.status('r') == 'accepted'
+    finally:
+        for process in processes:
+            if process.poll() is None:
+                process.kill()
+            process.wait(timeout=5)

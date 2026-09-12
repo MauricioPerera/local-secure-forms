@@ -1,6 +1,7 @@
 # Sprint 13 — Security remediation evidence
 
-Status: implementation verified locally; final CI and completion review pending.
+Status: remediation implemented; exact final-commit CI attestation is maintained
+in [PR #1](https://github.com/MauricioPerera/local-secure-forms/pull/1).
 Audit base: `fed1723a6e8c73074765fabb1e0fa80bea421a8f`.
 Scope: this repository only; synthetic credentials, local databases and effects.
 
@@ -39,7 +40,9 @@ tests were likewise migrated, not skipped.
 | False conformance | Offline composed Draft 2020-12 schemas, explicit date validator, negative tests, both pytest naming patterns | `test_schema_security.py`, `scripts/schema_validation.py`, `pytest.ini`, CI matrix |
 
 Concurrency tests use sixteen competing calls/connections and assert one
-successful reservation/effect. Crash evidence uses a child Python process that
+successful reservation/effect. An additional race uses eight independent Python
+processes and asserts exactly one success and seven rejected claims. Crash
+evidence uses a child Python process that
 consumes authorization then exits with `os._exit(17)`; a new connection cannot
 consume/reissue the ID. Restarted client tests preserve used-ID rejection.
 The durable content binding is checked directly in SQLite; no captured
@@ -62,10 +65,23 @@ python -m pytest tests -q
 git diff --check
 ```
 
-Current local result: 138 passed on Windows, six examples validated against
+Current local result: 143 passed on Windows, six examples validated against
 four schemas. CI is configured for Python 3.11/3.12/3.13 on Windows, Linux and
-macOS; configuration alone is not execution evidence. The final PR commit and
-links to successful CI will be recorded after the runs finish.
+macOS; configuration alone is not execution evidence.
+
+Initial full matrix: all nine jobs passed on commit
+`34502f10f041a38c68e9af85b2da624ecc45bfcf` in
+[run 34704624351](https://github.com/MauricioPerera/local-secure-forms/actions/runs/34704624351).
+That run precedes the added eight-process race test. The PR body records the
+final head SHA, final run URL and job results after the last update, rather
+than trying to embed this document's own commit hash within itself. Completion
+requires that final attestation to match the PR head; the initial run alone
+does not establish final-commit acceptance.
+
+The final review also rejects trailing newlines in schema identifiers, matching
+the Python full-match behavior. Four negative regressions cover operation,
+request ID, field name and preflight name; without this check a regex `$`
+anchor alone can accept a final newline in some JSON Schema engines.
 
 ## Boundaries and migration
 
@@ -76,6 +92,6 @@ to read secrets, enforce OS ACLs or implement actual GUI/PIN/TOTP enrollment.
 It does not certify the separate email CLI or any external integrator.
 
 SPEC, SECURITY, THREAT-MODEL, IMPLEMENTATION-GUIDE, CONFORMANCE and the affected
-Sprint 6/7/9 contracts describe these limits. The core/SDK uses the standard
+Sprint 2/3/4/6/7/9 contracts describe these limits. The core/SDK uses the standard
 library; schema verification has explicit development dependencies. No real
 credentials, email or user data were read or changed by this sprint.

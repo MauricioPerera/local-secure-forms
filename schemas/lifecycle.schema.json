@@ -13,7 +13,7 @@
   "additionalProperties": false,
   "properties": {
     "operation": {"enum": ["soft_delete", "restore", "purge"]},
-    "resource_ref": {"type": "string", "pattern": "^[A-Za-z0-9._:/-]{1,256}$"},
+    "resource_ref": {"type": "string", "pattern": "^[A-Za-z0-9._:/-]{1,256}$(?![\\s\\S])"},
     "risk": {"enum": ["low", "medium", "high", "irreversible"]},
     "confirmation": {"type": "string", "enum": ["user_accept", "pin", "pin_and_totp"]},
     "recovery_required": {"type": "boolean"},

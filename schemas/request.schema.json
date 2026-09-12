@@ -6,8 +6,8 @@
   "required": ["operation", "purpose", "fields", "validation", "expires_in_seconds"],
   "additionalProperties": false,
   "properties": {
-    "request_id": {"type": "string", "pattern": "^[A-Za-z0-9._-]{1,128}$"},
-    "operation": {"type": "string", "pattern": "^[a-z][a-z0-9_]{0,63}$"},
+    "request_id": {"type": "string", "pattern": "^[A-Za-z0-9._-]{1,128}$(?![\\s\\S])"},
+    "operation": {"type": "string", "pattern": "^[a-z][a-z0-9_]{0,63}$(?![\\s\\S])"},
     "purpose": {"type": "string", "minLength": 1, "maxLength": 4096, "pattern": "\\S"},
     "risk": {"enum": ["low", "medium", "high", "irreversible"]},
     "initiator": {"enum": ["user", "agent", "system"]},
@@ -21,7 +21,7 @@
         "required": ["name", "type", "sensitivity"],
         "additionalProperties": false,
         "properties": {
-          "name": {"type": "string", "pattern": "^[A-Za-z][A-Za-z0-9_.-]{0,63}$"},
+          "name": {"type": "string", "pattern": "^[A-Za-z][A-Za-z0-9_.-]{0,63}$(?![\\s\\S])"},
           "type": {"enum": ["text", "multiline", "email", "email_list", "hostname", "integer", "boolean", "secret", "opaque_reference", "safe_local_path"]},
           "sensitivity": {"enum": ["public", "private", "secret"]},
           "required": {"type": "boolean"},
@@ -33,12 +33,12 @@
           {"if": {"properties": {"type": {"const": "integer"}}}, "then": {"properties": {"default": {"type": "integer", "minimum": -9007199254740991, "maximum": 9007199254740991}}}},
           {"if": {"properties": {"type": {"const": "boolean"}}}, "then": {"properties": {"default": {"type": "boolean"}}}},
           {"if": {"properties": {"type": {"enum": ["text", "multiline", "email", "hostname", "opaque_reference", "safe_local_path"]}}}, "then": {"properties": {"default": {"type": "string", "minLength": 1, "maxLength": 65536, "pattern": "\\S"}}}},
-          {"if": {"properties": {"type": {"const": "email_list"}}}, "then": {"properties": {"default": {"type": "array", "minItems": 1, "maxItems": 100, "items": {"type": "string", "maxLength": 254, "pattern": "^[^\\s@<>\\u0000-\\u001f]+@[^\\s@<>\\u0000-\\u001f]+\\.[^\\s@<>\\u0000-\\u001f]+$"}}}}}
+          {"if": {"properties": {"type": {"const": "email_list"}}}, "then": {"properties": {"default": {"type": "array", "minItems": 1, "maxItems": 100, "items": {"type": "string", "maxLength": 254, "pattern": "^[^\\s@<>\\u0000-\\u001f]+@[^\\s@<>\\u0000-\\u001f]+\\.[^\\s@<>\\u0000-\\u001f]+$(?![\\s\\S])"}}}}}
         ]
       }
     },
     "validation": {"type": "object", "required": ["preflight"], "additionalProperties": false, "properties": {
-      "preflight": {"type": "string", "pattern": "^[a-z][a-z0-9_]{0,63}$"},
+      "preflight": {"type": "string", "pattern": "^[a-z][a-z0-9_]{0,63}$(?![\\s\\S])"},
       "on_failure": {"const": "do_not_store"}
     }},
     "confirmation": {"$ref": "confirmation.schema.json"},

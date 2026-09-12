@@ -7,11 +7,11 @@
   "additionalProperties": false,
   "properties": {
     "status": {"enum": ["accepted", "declined", "cancelled", "invalid", "failed", "expired"]},
-    "operation": {"type": "string", "pattern": "^[a-z][a-z0-9_]{0,63}$"},
-    "request_id": {"type": "string", "pattern": "^[A-Za-z0-9._-]{1,128}$"},
+    "operation": {"type": "string", "pattern": "^[a-z][a-z0-9_]{0,63}$(?![\\s\\S])"},
+    "request_id": {"type": "string", "pattern": "^[A-Za-z0-9._-]{1,128}$(?![\\s\\S])"},
     "risk": {"enum": ["low", "medium", "high", "irreversible"]},
-    "checks": {"type": "object", "propertyNames": {"pattern": "^[a-z][a-z0-9_]{0,63}$"}, "additionalProperties": {"type": "boolean"}},
-    "stored_refs": {"type": "object", "propertyNames": {"pattern": "^[a-z][a-z0-9_]{0,63}$"}, "additionalProperties": {"enum": [true, false, "present", "absent"]}},
-    "error_code": {"type": "string", "pattern": "^[a-z0-9_.-]{1,64}$"}
+    "checks": {"type": "object", "propertyNames": {"pattern": "^[a-z][a-z0-9_]{0,63}$(?![\\s\\S])"}, "additionalProperties": {"type": "boolean"}},
+    "stored_refs": {"type": "object", "propertyNames": {"pattern": "^[a-z][a-z0-9_]{0,63}$(?![\\s\\S])"}, "additionalProperties": {"enum": [true, false, "present", "absent"]}},
+    "error_code": {"type": "string", "pattern": "^[a-z0-9_.-]{1,64}$(?![\\s\\S])"}
   }
 }

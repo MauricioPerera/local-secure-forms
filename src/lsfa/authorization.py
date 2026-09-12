@@ -35,7 +35,11 @@ class AuthorizationStore:
 
     def _connect(self):
         connection = sqlite3.connect(self.path, timeout=10)
-        connection.execute('PRAGMA synchronous=FULL')
+        try:
+            connection.execute('PRAGMA synchronous=FULL')
+        except Exception:
+            connection.close()
+            raise
         return connection
 
     @staticmethod

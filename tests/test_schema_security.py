@@ -79,3 +79,18 @@ def test_confirmation_and_lifecycle_positive():
              'confirmation.schema.json')
     validate({'operation': 'purge', 'resource_ref': 'synthetic', 'risk': 'irreversible',
               'confirmation': 'pin_and_totp'}, 'lifecycle.schema.json')
+
+
+@pytest.mark.parametrize('field', ['operation', 'request_id', 'field_name', 'preflight'])
+def test_metadata_cannot_end_with_newline(field):
+    data = example()
+    if field == 'field_name':
+        data['fields'][0]['name'] += '\n'
+    elif field == 'preflight':
+        data['validation']['preflight'] += '\n'
+    elif field == 'request_id':
+        data['request_id'] = 'synthetic\n'
+    else:
+        data['operation'] += '\n'
+    with pytest.raises(ValueError):
+        validate(data)
