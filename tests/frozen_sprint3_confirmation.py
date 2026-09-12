@@ -9,7 +9,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 def test_confirmation_schema_freezes_methods_and_single_use():
     schema = json.loads((ROOT / "schemas" / "confirmation.schema.json").read_text(encoding="utf-8"))
-    assert schema["required"] == ["method", "required"]
+    assert schema["required"] == ["method", "required", "single_use"]
     assert schema["properties"]["method"]["enum"] == ["user_accept", "pin", "pin_and_totp"]
     assert schema["properties"]["single_use"]["const"] is True
     assert schema["additionalProperties"] is False

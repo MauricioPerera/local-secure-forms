@@ -22,3 +22,9 @@ contraseñas, tokens ni datos personales.
 
 La solicitud expira cuando transcurre `expires_in_seconds`; una solicitud
 expirada no puede aceptar, guardar secretos ni ejecutar efectos externos.
+
+El cliente fija el plazo al emitir la solicitud, antes de capturar datos.
+`presentation` es opcional (`auto`). Nombres duplicados, defaults privados o
+secretos, tipos no soportados y booleanos usados como TTL son inválidos.
+Los validadores son nombres registrados localmente, nunca código del agente.
+Véase [el perfil ejecutable y sus límites](../SDK-MIGRATION.md).

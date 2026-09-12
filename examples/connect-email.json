@@ -13,6 +13,6 @@
     {"name": "smtp_port", "type": "integer", "sensitivity": "public", "default": 465}
   ],
   "validation": {"preflight": "imap_auth_and_smtp_auth", "on_failure": "do_not_store"},
-  "confirmation": {"method": "user_accept", "required": true},
+  "confirmation": {"method": "user_accept", "required": true, "single_use": true},
   "expires_in_seconds": 600
 }

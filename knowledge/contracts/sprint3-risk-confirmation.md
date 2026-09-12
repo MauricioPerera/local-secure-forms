@@ -46,3 +46,10 @@ Salidas: confirmación consumible una sola vez o estado no ejecutable.
 No implementar todavía proveedores de TOTP ni una UI concreta. **PARAR y reportar si**
 el agente puede confirmar, recuperar un factor o reutilizar una
 confirmación consumida.
+
+## Actualización Sprint 13
+
+`required` y `single_use` son `true` obligatorios en confirmation. La etiqueta
+del método no es prueba: el verificador confiable debe acreditar factores y
+binding del contenido. La autorización se consume persistentemente antes del
+efecto y no se renueva por reinicio. La UI/PIN/TOTP reales siguen fuera del SDK.

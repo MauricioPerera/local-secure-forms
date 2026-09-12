@@ -3,13 +3,13 @@
   "$id": "https://local-secure-forms.dev/schemas/confirmation.schema.json",
   "title": "LSFA Confirmation",
   "type": "object",
-  "required": ["method", "required"],
+  "required": ["method", "required", "single_use"],
   "additionalProperties": false,
   "properties": {
     "method": {"enum": ["user_accept", "pin", "pin_and_totp"]},
-    "required": {"type": "boolean"},
+    "required": {"const": true},
     "summary": {"type": "array", "items": {"type": "string", "minLength": 1}},
-    "request_id": {"type": "string", "pattern": "^[A-Za-z0-9._-]{1,128}$"},
+    "request_id": {"type": "string", "pattern": "^[A-Za-z0-9._-]{1,128}$(?![\\s\\S])"},
     "expires_at": {"type": "string", "format": "date-time"},
     "single_use": {"const": true}
   }

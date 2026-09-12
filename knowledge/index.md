@@ -6,6 +6,9 @@ status: draft
 
 # Índice de conocimiento LSFA
 
+- [Sprint 13 — Remediación de seguridad](contracts/sprint13-security-remediation.md)
+- [Sprint 13 — Evidencia y revisión de seguridad](sprint13-security-report.md)
+
 - [Definición del producto](../DEFINITION.md)
 - [Actores](domain/actors.md)
 - [Casos de uso](domain/use-cases.md)

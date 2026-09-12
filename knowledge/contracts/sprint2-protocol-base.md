@@ -28,7 +28,7 @@ Salidas: solicitud validable y resultado estructurado sin secretos.
 
 ## Examples
 
-- `connect_email` devuelve verificaciones IMAP/SMTP y una referencia opaca.
+- `connect_email` devuelve verificaciones IMAP/SMTP y un estado de existencia.
 - `cancelled` indica que el usuario cerró o canceló el formulario.
 - `expired` indica que venció el tiempo antes de confirmar.
 
@@ -49,3 +49,10 @@ Los esquemas son independientes del lenguaje y del transporte. No incorporar
 todavía lógica de UI, almacenamiento ni proveedores externos. **PARAR y reportar si**
 un diseño necesita incluir un secreto en el resultado o ejecutar
 una solicitud después de su expiración.
+
+## Actualización Sprint 13
+
+Los esquemas compuestos restringen tipos, defaults sensibles, riesgo y método.
+El SDK conserva correlación y riesgo efectivo y limita checks/referencias a
+estados permitidos. El kit añade reglas semánticas de unicidad e identidad;
+ver `sprint13-security-remediation.md` para pruebas y migración actuales.

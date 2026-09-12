@@ -15,7 +15,8 @@ el núcleo LSFA a una tecnología visual.
 
 ## Interface
 
-Entradas: solicitud, callback de captura, callback de confirmación y ejecutor.
+Entradas (Sprint 13): ticket emitido por `LocalClient`, callbacks locales de
+captura/confirmación y política confiable con preflight/ejecutor registrados.
 Salida: `PresentationResult` con estado estructurado y sin valores capturados.
 
 ## Invariants
@@ -47,3 +48,10 @@ Salida: `PresentationResult` con estado estructurado y sin valores capturados.
 No añadir dependencias GUI ni integrar todavía almacenes seguros. **PARAR y
 reportar si** un adaptador expone valores capturados al agente o ejecuta tras
 cancelación, rechazo o expiración.
+
+## Actualización Sprint 13
+
+La migración incompatible se documenta en `SDK-MIGRATION.md`. La confirmación
+booleana no acredita PIN/TOTP; se exige un verificador local. Las pruebas
+conservan cancelación, rechazo y equivalencia entre modos y añaden expiración,
+salidas adversarias, vinculación y consumo persistente antes del efecto.

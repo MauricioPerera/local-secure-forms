@@ -46,3 +46,11 @@ Salidas: estado de la operación, recuperación posible o `recovery_required`.
 No implementar todavía adaptadores de almacenamiento. **PARAR y reportar si**
 una acción permanente puede ejecutarse sin confirmación reforzada o si un
 estado parcial se presenta como exitoso.
+
+## Actualización Sprint 13
+
+La política del cliente no puede registrar purge por debajo de irreversible.
+Solicitud y lifecycle comparten restricciones de riesgo del esquema. Los tres
+adaptadores rechazan prueba insuficiente; soft_delete/restore tienen registros
+separados. Una salida inválida tras ejecutar produce estado desconocido sin
+autorizar repetición; la recuperación está descrita en `SDK-MIGRATION.md`.
