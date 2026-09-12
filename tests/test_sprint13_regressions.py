@@ -1,5 +1,6 @@
 """Original four audit reproductions, migrated to client-issued requests."""
 import json
+import pytest
 
 
 def test_executor_echo_cannot_escape_through_checks(harness):
@@ -21,7 +22,9 @@ def test_expiration_during_capture_prevents_execution(harness):
 
 
 def test_purge_cannot_choose_basic_confirmation(harness):
-    _, ticket, adapter, effects, _ = harness(operation='purge', floor='irreversible',
+    with pytest.raises(ValueError, match='purge_requires_irreversible'):
+        harness(operation='purge', risk='low', floor='irreversible')
+    _, ticket, adapter, effects, _ = harness(operation='purge', risk='irreversible', floor='irreversible',
         confirm=lambda c, m: m == 'user_accept')
     result = adapter.run(ticket).result
     assert effects == []

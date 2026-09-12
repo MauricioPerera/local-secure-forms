@@ -59,8 +59,10 @@ not a deployable authenticator. Do not copy it as PIN/TOTP verification.
 explicit trusted minimum; `soft_delete` and `restore` are separate registrations
 with separate preflight/executor implementations. Unknown operations, field
 definitions or preflight names are rejected. Agent-provided risk can only raise
-the effective risk. Direct SDK issuance upgrades a lower requested risk; wire
-JSON claiming `purge` with lower risk is structurally invalid.
+the effective risk. Both SDK issuance and wire JSON reject `purge` unless the
+request explicitly declares `irreversible`; there is no silent normalization
+of an incorrectly classified permanent deletion. Other registered operations
+apply their trusted minimum even if a lower risk was requested.
 
 The wire schemas describe presentation/confirmation hints; the Python models
 are the execution core, not an automatic JSON deserializer. Validate wire data

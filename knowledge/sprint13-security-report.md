@@ -83,6 +83,10 @@ the Python full-match behavior. Four negative regressions cover operation,
 request ID, field name and preflight name; without this check a regex `$`
 anchor alone can accept a final newline in some JSON Schema engines.
 
+The requirement-by-requirement review aligned SDK issuance with the wire rule:
+purge requests declaring low/medium/high are rejected, not silently upgraded.
+An explicitly irreversible purge still requires verified PIN/TOTP evidence.
+
 ## Boundaries and migration
 
 `SDK-MIGRATION.md` is the integration contract: the old boolean-confirmation

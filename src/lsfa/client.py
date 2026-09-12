@@ -101,6 +101,8 @@ class LocalClient:
         policy = self.policies.get(request.operation)
         if policy is None:
             raise ValueError('unknown_operation')
+        if request.operation == 'purge' and RiskLevel(request.risk) != RiskLevel.IRREVERSIBLE:
+            raise ValueError('purge_requires_irreversible')
         if request.fields != policy.fields or request.validation['preflight'] != policy.preflight_name:
             raise ValueError('request_policy_mismatch')
         levels = list(RiskLevel)

@@ -44,6 +44,10 @@ def test_replay_and_concurrent_effects(harness):
 
 @pytest.mark.parametrize('risk', ['low', 'medium', 'high', 'irreversible'])
 def test_purge_floor_and_legitimate_confirmation(harness, risk):
+    if risk != 'irreversible':
+        with pytest.raises(ValueError, match='purge_requires_irreversible'):
+            harness(operation='purge', risk=risk, floor='irreversible')
+        return
     _, ticket, adapter, effects, _ = harness(operation='purge', risk=risk, floor='irreversible')
     assert ticket.request.risk == 'irreversible'
     assert adapter.run(ticket).result.status == 'accepted'
@@ -52,7 +56,7 @@ def test_purge_floor_and_legitimate_confirmation(harness, risk):
 
 @pytest.mark.parametrize('proof', [True, 'pin_and_totp', {'method': 'pin_and_totp'}])
 def test_method_name_is_not_authentication(harness, proof):
-    _, ticket, adapter, effects, _ = harness(operation='purge', floor='irreversible',
+    _, ticket, adapter, effects, _ = harness(operation='purge', risk='irreversible', floor='irreversible',
                                           confirm=lambda c, m: proof)
     assert adapter.run(ticket).result.status == 'failed'
     assert not effects
@@ -100,7 +104,7 @@ def test_preflight_failure_prevents_execution(harness):
 
 @pytest.mark.parametrize('mode', [GuiAdapter, TerminalAdapter, ManualAdapter])
 def test_every_adapter_rejects_unverified_irreversible_action(harness, mode):
-    _, ticket, adapter, effects, _ = harness(operation='purge', floor='irreversible',
+    _, ticket, adapter, effects, _ = harness(operation='purge', risk='irreversible', floor='irreversible',
                                           mode=mode, confirm=lambda c, m: True)
     assert adapter.run(ticket).result.status == 'failed'
     assert not effects
