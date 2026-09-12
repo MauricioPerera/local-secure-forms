@@ -46,3 +46,11 @@ Salida: código 0 y resumen estructural, o error explícito sin secretos.
 El kit no certifica una implementación ni sustituye una auditoría externa.
 **PARAR y reportar si** la validación necesita secretos, red o ejecución de
 acciones externas.
+
+## Actualización Sprint 13
+
+Aplicar Draft 2020-12 con referencias locales a confirmation/lifecycle y
+validación de formatos; dependencias en `requirements-dev.txt`. Añadir pruebas
+negativas de comportamiento y descubrir tanto `test_*.py` como `frozen_*.py`.
+La matriz incluye macOS además de Linux y Windows. No confundir el resultado
+estructural con evidencia sobre la UI o el verificador real de un integrador.

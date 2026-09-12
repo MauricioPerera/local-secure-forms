@@ -11,8 +11,8 @@ recibe secretos ni puede confirmar por el usuario.
 2. Presentar el formulario en GUI, terminal o modo headless.
 3. Validar localmente antes de persistir; los errores deben ser accionables.
 4. Guardar secretos en el almacén seguro del sistema operativo.
-5. Devolver solo identificadores, campos no sensibles y estado de validación.
-6. Añadir confirmación explícita para acciones de riesgo medio o alto.
+5. Devolver solo checks booleanos registrados y estados de existencia.
+6. Añadir confirmación humana explícita y los factores exigidos por riesgo.
 7. Ejecutar el kit de conformidad antes de publicar una versión.
 
 ## Reglas de seguridad
@@ -37,6 +37,7 @@ debe convertir secretos en variables de entorno visibles.
 Para una versión concreta, ejecuta:
 
 ```text
+python -m pip install -r requirements-dev.txt
 python scripts/validate_conformance.py
 python scripts/validate_examples.py
 python -m pytest tests -q
@@ -45,3 +46,15 @@ python -m pytest tests -q
 Publica la versión, plataforma, adaptadores disponibles y cualquier excepción
 conocida. LSFA 0.2 es experimental y esta declaración no es una certificación
 externa.
+
+## API de referencia actual
+
+Seguir [SDK-MIGRATION.md](SDK-MIGRATION.md): registrar `OperationPolicy`, usar
+un `AuthorizationStore` persistente compartido, emitir con `LocalClient.issue`
+y ejecutar `adapter.run(ticket)`. El antiguo `run(request, execute)` se retiró
+porque no proporcionaba una frontera de autorización verificable.
+
+No copiar los verificadores sintéticos de tests para producción. La UI y los
+factores reales siguen siendo responsabilidad del integrador. `accepted`
+requiere retorno normal del ejecutor y salida válida; un error posterior a un
+posible efecto deja la autorización consumida y requiere investigación.

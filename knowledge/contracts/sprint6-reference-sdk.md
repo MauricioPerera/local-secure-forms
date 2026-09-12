@@ -46,3 +46,10 @@ Salidas: objetos inmutables y resultados serializables sin secretos.
 Usar únicamente la biblioteca estándar. **PARAR y reportar si** el SDK
 necesita leer un secreto, depende de un proveedor externo o devuelve material
 de autenticación.
+
+## Actualización Sprint 13
+
+Los modelos siguen usando biblioteca estándar. El coordinador añade política
+registrada, validación previa y autorización SQLite. Los resultados de callbacks
+se limitan por nombres y tipos; la validación no aísla callbacks comprometidos.
+Ver `sprint13-security-remediation.md` y `SDK-MIGRATION.md` para el contrato actual.

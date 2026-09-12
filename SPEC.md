@@ -19,8 +19,9 @@ otro canal.
 
 ## Solicitud
 
-Una solicitud debe incluir `operation`, `purpose`, `fields`, `presentation`,
-`validation` y `expires_in_seconds`. Cada campo debe declarar `name`, `type` y
+Una solicitud debe incluir `operation`, `purpose`, `fields`, `validation` y
+`expires_in_seconds`. `presentation` es opcional y se interpreta como `auto`.
+Cada campo debe declarar `name`, `type` y
 `sensitivity`. Los campos `secret` nunca pueden aparecer en el resultado.
 
 ```json
@@ -53,16 +54,15 @@ flujo.
 ## Resultado
 
 Los estados son `accepted`, `declined`, `cancelled`, `invalid`, `failed` y
-`expired`. Un resultado exitoso puede incluir verificaciones y un identificador
-opaco, pero nunca el valor de un campo secreto.
+`expired`. Un resultado exitoso puede incluir verificaciones booleanas y estados
+de existencia, pero nunca el valor de un campo secreto.
 
 ```json
 {
   "status": "accepted",
   "operation": "connect_email",
-  "credential_stored": true,
-  "imap_verified": true,
-  "smtp_verified": true
+  "checks": {"imap_verified": true, "smtp_verified": true},
+  "stored_refs": {"account": "present"}
 }
 ```
 
@@ -98,7 +98,7 @@ El borrado permanente (`purge`) debe ser una operación separada, declarar
 
 El cliente puede devolver `request_id`, `risk`, `checks`, `stored_refs` y
 `error_code`, además de `status` y `operation`. `stored_refs` contiene solo
-identificadores opacos o estados de existencia; nunca secretos, PIN, tokens,
+estados booleanos o `present`/`absent`; nunca secretos, PIN, tokens,
 códigos ni valores completos de campos sensibles.
 
 ## Integración manual y asistida
@@ -120,3 +120,15 @@ Una implementación conforme debe demostrar que:
 7. Puede devolver presencia o estado del secreto sin devolver su contenido.
 8. Declara el nivel de riesgo y aplica el método de confirmación correspondiente.
 9. Separa las operaciones reversibles de las irreversibles y permite cancelar.
+
+## Perfil ejecutable del SDK — Sprint 13
+
+El cliente registra campos, preflight, ejecutor, riesgo mínimo y nombres de
+salida permitidos por operación. Emite una solicitud con plazo fijo y reserva
+su autorización en almacenamiento persistente antes del efecto. `purge` tiene
+un mínimo irreversible no reducible. El verificador local debe demostrar la
+aprobación y los factores: una etiqueta de método o un booleano no son prueba.
+
+El contrato preciso, límites de entrada, recuperación, migración incompatible
+y responsabilidades del integrador están en [SDK-MIGRATION.md](SDK-MIGRATION.md).
+Los adaptadores son callbacks de referencia, no implementaciones de GUI/MFA.

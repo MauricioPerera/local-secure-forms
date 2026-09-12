@@ -7,6 +7,6 @@
     {"name": "resource_ref", "type": "opaque_reference", "sensitivity": "private", "required": true}
   ],
   "validation": {"preflight": "resource_is_in_trash"},
-  "confirmation": {"method": "user_accept", "required": true},
+  "confirmation": {"method": "user_accept", "required": true, "single_use": true},
   "expires_in_seconds": 300
 }

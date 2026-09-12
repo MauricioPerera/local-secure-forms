@@ -14,7 +14,7 @@
 - Un formulario falso solicita más datos de los necesarios.
 - Una respuesta de error devuelve información sensible.
 - Un proceso local malicioso observa la máquina del usuario.
-- Un agente intenta elevar el riesgo o reutilizar una confirmación anterior.
+- Un agente intenta reducir el riesgo mínimo o reutilizar una confirmación anterior.
 - Un borrado aparentemente reversible termina siendo permanente sin aviso.
 
 ## Mitigaciones
@@ -37,3 +37,21 @@
 LSFA reduce la exposición accidental al agente y a sus canales. No puede
 garantizar protección contra malware con control total del equipo, keyloggers,
 captura de pantalla o un usuario que voluntariamente comparta el secreto.
+
+## Frontera implementada en el Sprint 13
+
+Se confían el registro local de operaciones, callbacks, verificador de factores,
+reloj y base SQLite persistente con permisos apropiados. El agente solo aporta
+datos; no comparte sus privilegios ni ejecuta código dentro de ese cliente.
+Una huella HMAC liga solicitud y valores; la reserva atómica evita dos efectos
+con la misma autorización, incluso ante concurrencia o caída del proceso.
+
+La base guarda IDs, plazos, estados y huellas con clave, no valores capturados.
+Un proceso caído puede dejar una acción ambigua: no hay transacción distribuida
+ni garantía de exactamente una ejecución. Restaurar una copia vieja de la base
+o cambiar sus permisos puede invalidar la protección. Un nuevo ID tampoco
+deduplica una acción de negocio ya realizada.
+
+El SDK no implementa UI aislada ni verificación real de PIN/TOTP; exige un
+verificador confiable. No impide que un callback comprometido filtre secretos
+por red, logs o canales encubiertos. Ver [límites completos](SDK-MIGRATION.md).

@@ -10,6 +10,6 @@
     {"name": "body", "type": "multiline", "sensitivity": "private", "required": true}
   ],
   "validation": {"preflight": "recipient_and_draft_review"},
-  "confirmation": {"method": "pin", "required": true, "summary": "to, subject"},
+  "confirmation": {"method": "pin", "required": true, "single_use": true, "summary": ["to", "subject", "body"]},
   "expires_in_seconds": 300
 }

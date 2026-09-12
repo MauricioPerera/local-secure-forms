@@ -2,6 +2,12 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://local-secure-forms.dev/schemas/lifecycle.schema.json",
   "title": "LSFA Lifecycle Operation",
+  "$defs": {
+    "riskPolicy": {
+      "if": {"required": ["operation"], "properties": {"operation": {"const": "purge"}}},
+      "then": {"required": ["risk"], "properties": {"risk": {"const": "irreversible"}}}
+    }
+  },
   "type": "object",
   "required": ["operation", "resource_ref", "risk", "confirmation"],
   "additionalProperties": false,
@@ -12,5 +18,14 @@
     "confirmation": {"type": "string", "enum": ["user_accept", "pin", "pin_and_totp"]},
     "recovery_required": {"type": "boolean"},
     "rollback": {"type": "object"}
-  }
+  },
+  "allOf": [
+    {"$ref": "#/$defs/riskPolicy"},
+    {"if": {"properties": {"operation": {"const": "purge"}}},
+     "then": {"properties": {"risk": {"const": "irreversible"}, "confirmation": {"const": "pin_and_totp"}}}},
+    {"if": {"properties": {"risk": {"const": "high"}}},
+     "then": {"properties": {"confirmation": {"enum": ["pin", "pin_and_totp"]}}}},
+    {"if": {"properties": {"risk": {"const": "irreversible"}}},
+     "then": {"properties": {"confirmation": {"const": "pin_and_totp"}}}}
+  ]
 }

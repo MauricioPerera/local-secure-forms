@@ -8,6 +8,8 @@ from .core import (
     RiskLevel,
 )
 from .adapters import GuiAdapter, ManualAdapter, PresentationResult, TerminalAdapter
+from .authorization import AuthorizationStore
+from .client import LocalClient, OperationPolicy, VerifiedConfirmation
 
 __all__ = [
     "ConfirmationPolicy",
@@ -19,4 +21,8 @@ __all__ = [
     "ManualAdapter",
     "PresentationResult",
     "TerminalAdapter",
+    "AuthorizationStore",
+    "LocalClient",
+    "OperationPolicy",
+    "VerifiedConfirmation",
 ]
