@@ -1,0 +1,3 @@
+# Dependencias exclusivas del companion local de CloudPress.
+keyring>=25,<27
+qrcode[pil]>=8,<9

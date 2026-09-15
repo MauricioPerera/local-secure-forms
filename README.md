@@ -45,10 +45,12 @@ operación. Los perfiles especializados se registran mediante
 [`examples/cloudpress_loopback_broker.py`](examples/cloudpress_loopback_broker.py) es un companion de referencia para CloudPress. Escucha sólo en loopback, valida el origen configurado, liga la ejecución a una URL exacta de CloudPress y utiliza el ciclo de autorización de un solo uso del SDK. Requiere un verificador local real configurado mediante `--verifier modulo:funcion`; no incluye PIN/TOTP falso ni ejecuta acciones irreversibles sin una confirmación local conforme.
 
 ```text
-python examples/cloudpress_loopback_broker.py --origin https://cms.example --verifier my_trusted_verifier:verify
+python -m pip install -r requirements-companion.txt
+python -m src.lsfa.cloudpress_verifier enroll
+python examples/cloudpress_loopback_broker.py --origin https://cms.example --verifier src.lsfa.cloudpress_verifier:verify
 ```
 
-El verificador recibe `(summary, method, binding, expires_at)` y, sólo después de realizar la autenticación local exigida, devuelve `VerifiedConfirmation(binding, method, expires_at)`. Un `True`, una cadena o un JSON no son confirmación válida. Para las acciones irreversibles, `method` es `pin_and_totp`; para recuperación TOTP, `pin`.
+El enrolamiento abre un QR local para vincular una aplicación autenticadora y guarda la semilla TOTP y el verificador scrypt del PIN mediante el almacén seguro del sistema operativo. El QR y la semilla no se imprimen, almacenan en archivos temporales ni regresan al agente. El verificador muestra el resumen canónico, exige escribir `APROBAR`, solicita PIN para riesgo alto y PIN + TOTP para acciones irreversibles. Devuelve `VerifiedConfirmation(binding, method, expires_at)` sólo después de validar esos factores; un `True`, una cadena o un JSON no son confirmación válida.
 
 El mismo companion atiende la recuperación TOTP de CloudPress en la ruta loopback /v1/cloudpress/totp-recovery. CloudPress verifica primero el código de Google Authenticator o un código de respaldo; sólo entonces LSFA solicita el PIN local (riesgo high) y ejecuta el restablecimiento de contraseña ligado a la solicitud. Los códigos, contraseñas y tokens no se devuelven al agente.
 
