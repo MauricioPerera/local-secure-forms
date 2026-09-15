@@ -14,8 +14,16 @@ import importlib
 import json
 from pathlib import Path
 import re
+import sys
 from urllib.parse import urlparse
 from urllib.request import Request, urlopen
+
+# ``python examples/cloudpress_loopback_broker.py`` sets sys.path[0] to the
+# examples directory. Add the repository root explicitly so the documented
+# launcher resolves the local SDK instead of an unrelated installed package.
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
 
 from src.lsfa.adapters import TerminalAdapter
 from src.lsfa.authorization import AuthorizationStore
