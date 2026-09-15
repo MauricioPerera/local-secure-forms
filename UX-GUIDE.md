@@ -38,6 +38,11 @@ corregir el problema sin mostrar secretos, trazas ni detalles internos.
 - Manual/headless: instrucciones legibles, confirmación explícita y ninguna
   degradación silenciosa de seguridad.
 
+Las secciones declarativas pueden ordenar o plegar contenido, pero un campo
+obligatorio debe seguir siendo visible y accesible. Los controles de secretos
+y la confirmación se distinguen visualmente de la composición solicitada y no
+pueden ser sustituidos por un perfil.
+
 ## Idiomas
 
 La implementación debe separar texto de lógica y permitir al menos español,

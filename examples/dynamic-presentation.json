@@ -1,0 +1,28 @@
+{
+  "operation": "connect_email",
+  "purpose": "Configurar una cuenta IMAP/SMTP",
+  "risk": "medium",
+  "initiator": "agent",
+  "presentation": {
+    "mode": "form",
+    "locale": "es",
+    "theme": "system",
+    "layout": {
+      "sections": [
+        {"id": "account", "title": "Tu cuenta", "fields": ["email", "password"]},
+        {"id": "advanced", "title": "Configuración avanzada", "fields": ["imap_host", "imap_port", "smtp_host", "smtp_port"], "collapsed": true}
+      ]
+    }
+  },
+  "fields": [
+    {"name": "email", "type": "email", "sensitivity": "private", "required": true},
+    {"name": "password", "type": "secret", "sensitivity": "secret", "required": true},
+    {"name": "imap_host", "type": "hostname", "sensitivity": "public", "required": true},
+    {"name": "imap_port", "type": "integer", "sensitivity": "public", "default": 993},
+    {"name": "smtp_host", "type": "hostname", "sensitivity": "public", "required": true},
+    {"name": "smtp_port", "type": "integer", "sensitivity": "public", "default": 465}
+  ],
+  "validation": {"preflight": "imap_auth_and_smtp_auth", "on_failure": "do_not_store"},
+  "confirmation": {"method": "user_accept", "required": true, "single_use": true},
+  "expires_in_seconds": 600
+}

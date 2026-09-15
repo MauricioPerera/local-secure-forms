@@ -37,3 +37,7 @@ impacto.
 Los adaptadores deben conservar los mismos nombres de campos, estados,
 `error_code` y semántica de cancelación. Solo la presentación y la traducción
 pueden variar entre plataformas.
+
+Los títulos y agrupaciones declarativos se muestran como contenido solicitado,
+separados del encabezado confiable con aplicación, operación y riesgo. Ningún
+perfil puede imitar o reemplazar los controles de confirmación del cliente.

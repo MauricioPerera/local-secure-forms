@@ -1,7 +1,7 @@
 ---
 type: LSFA Protocol Specification
 id: lsfa-presentation
-version: 0.2
+version: 0.3
 status: draft
 ---
 
@@ -27,3 +27,27 @@ ocultar secretos, respetar expiración y exigir el mismo método de confirmació
 Los adaptadores del SDK no implementan esas interfaces visuales ni factores
 reales; aplican un flujo común a callbacks confiables. No ejecutan headless
 automáticamente ni convierten ausencia de UI en autorización.
+
+## Presentación declarativa 0.3
+
+`presentation` conserva las cadenas de 0.2 y también admite un objeto con
+`mode`, `locale`, `theme` y, de forma mutuamente exclusiva, `layout` o
+`profile`. Es una sugerencia inerte: no puede contener HTML, scripts, URLs,
+acciones, validadores, riesgo ni confirmación.
+
+Un `layout` contiene secciones con título, estado inicial plegado y nombres de
+campos. Debe incluir exactamente una vez todos los campos autorizados por la
+política. No puede añadir, ocultar ni repetir campos. El cliente puede ignorar
+el orden, tema, idioma o agrupación cuando su plataforma no los soporte, pero
+debe conservar todos los campos y su semántica.
+
+Un `profile` identifica una plantilla instalada en el registro del cliente.
+La solicitud solo aporta el nombre: nunca transporta código o contenido de la
+plantilla. Un perfil desconocido falla cerrado. Perfil y layout inline no se
+pueden combinar.
+
+Los controles `secret`, PIN y segundo factor, así como el resumen y los botones
+de confirmación, pertenecen al chrome confiable del cliente. Una plantilla no
+puede renderizarlos, reemplazarlos ni alterar su prominencia. GUI, terminal y
+manual/headless derivan de la misma solicitud; la falta de soporte visual
+degrada a generación automática, nunca a menor seguridad.

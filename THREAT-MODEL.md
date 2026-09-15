@@ -12,6 +12,7 @@
 - Un log, historial de shell o archivo temporal conserva el secreto.
 - Una instrucción maliciosa induce al agente a confirmar una acción.
 - Un formulario falso solicita más datos de los necesarios.
+- Una composición visual oculta campos, suplanta la confirmación o ejecuta código.
 - Una respuesta de error devuelve información sensible.
 - Un proceso local malicioso observa la máquina del usuario.
 - Un agente intenta reducir el riesgo mínimo o reutilizar una confirmación anterior.
@@ -23,6 +24,8 @@
 - Declarar sensibilidad por campo y bloquear secretos en resultados.
 - Usar almacenes seguros nativos del sistema operativo.
 - Validar propósito, esquema, expiración y operación.
+- Limitar la composición a secciones inertes que cubren exactamente los campos
+  de la política y resolver perfiles solo desde un registro local.
 - Mostrar al usuario qué aplicación solicita el dato y por qué.
 - Exigir confirmación humana independiente.
 - Usar códigos de error estables y sanitizados.

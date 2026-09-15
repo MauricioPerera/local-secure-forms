@@ -13,6 +13,61 @@ class RiskLevel(str, Enum):
     IRREVERSIBLE = "irreversible"
 
 
+@dataclass(frozen=True)
+class PresentationSection:
+    """Agrupación visual inerte; nunca define campos ni comportamiento."""
+
+    id: str
+    title: str
+    fields: tuple[str, ...]
+    collapsed: bool = False
+
+    def __post_init__(self):
+        if (not isinstance(self.id, str) or
+                not re.fullmatch(r"[a-z][a-z0-9_-]{0,63}", self.id) or
+                not isinstance(self.title, str) or not self.title.strip() or
+                len(self.title) > 160 or type(self.fields) is not tuple or
+                not self.fields or any(not isinstance(name, str) for name in self.fields) or
+                type(self.collapsed) is not bool):
+            raise ValueError("presentation section invalid")
+
+
+@dataclass(frozen=True)
+class PresentationSpec:
+    """Sugerencia declarativa de UI, sin autoridad sobre la operación."""
+
+    mode: str = "auto"
+    profile: str | None = None
+    locale: str | None = None
+    theme: str = "system"
+    sections: tuple[PresentationSection, ...] = ()
+
+    def __post_init__(self):
+        if self.mode not in {"auto", "form", "terminal", "headless", "manual"}:
+            raise ValueError("presentation mode invalid")
+        if self.profile is not None and (not isinstance(self.profile, str) or
+                not re.fullmatch(r"[a-z][a-z0-9_.-]{0,63}", self.profile)):
+            raise ValueError("presentation profile invalid")
+        if self.locale is not None and (not isinstance(self.locale, str) or
+                not re.fullmatch(r"[A-Za-z]{2,3}(?:-[A-Za-z0-9]{2,8})*", self.locale)):
+            raise ValueError("presentation locale invalid")
+        if self.theme not in {"system", "light", "dark", "high_contrast"}:
+            raise ValueError("presentation theme invalid")
+        if type(self.sections) is not tuple or any(
+                not isinstance(section, PresentationSection) for section in self.sections):
+            raise ValueError("presentation sections invalid")
+        if self.profile is not None and self.sections:
+            raise ValueError("profile and inline layout are mutually exclusive")
+
+    def validate_fields(self, field_names):
+        """Un layout no puede añadir, ocultar ni repetir campos de la política."""
+        if not self.sections:
+            return
+        displayed = [name for section in self.sections for name in section.fields]
+        if len(displayed) != len(set(displayed)) or set(displayed) != set(field_names):
+            raise ValueError("presentation fields mismatch")
+
+
 class ConfirmationPolicy:
     """Regla de confirmación mínima; no captura PIN ni códigos."""
 
@@ -69,6 +124,7 @@ class LSFARequest:
     risk: RiskLevel = RiskLevel.MEDIUM
     request_id: str | None = None
     initiator: str = "agent"
+    presentation: str | PresentationSpec = "auto"
 
     def __post_init__(self):
         if (not isinstance(self.operation, str) or
@@ -94,6 +150,13 @@ class LSFARequest:
             raise ValueError("validation invalid")
         if self.initiator not in {"user", "agent", "system"}:
             raise ValueError("initiator invalid")
+        if isinstance(self.presentation, str):
+            if self.presentation not in {"auto", "form", "terminal", "headless", "manual"}:
+                raise ValueError("presentation invalid")
+        elif isinstance(self.presentation, PresentationSpec):
+            self.presentation.validate_fields(field.name for field in self.fields)
+        else:
+            raise ValueError("presentation invalid")
 
     def expired(self, created_at, now=None):
         current = now or datetime.now(timezone.utc)

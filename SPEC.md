@@ -21,6 +21,8 @@ otro canal.
 
 Una solicitud debe incluir `operation`, `purpose`, `fields`, `validation` y
 `expires_in_seconds`. `presentation` es opcional y se interpreta como `auto`.
+También puede ser una composición declarativa 0.3 validada o la referencia a
+un perfil visual registrado localmente. La presentación nunca concede autoridad.
 Cada campo debe declarar `name`, `type` y
 `sensitivity`. Los campos `secret` nunca pueden aparecer en el resultado.
 
@@ -45,6 +47,12 @@ Cada campo debe declarar `name`, `type` y
 - `form`: formulario gráfico local.
 - `terminal`: preguntas interactivas con entrada secreta oculta.
 - `headless`: referencia previamente autorizada a un almacén de secretos.
+
+La composición declarativa puede ordenar y agrupar los campos ya autorizados,
+pero debe cubrirlos exactamente una vez. No admite HTML, scripts, URLs ni
+acciones. Los perfiles se instalan en el cliente; un nombre enviado por el
+agente no instala código. Secretos y confirmaciones siempre usan controles del
+cliente confiable. Véase [presentación](specs/lsfa-presentation.md).
 - `auto`: gráfico si existe UI, terminal si existe TTY y headless solo con
   política explícita.
 

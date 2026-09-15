@@ -12,7 +12,7 @@ else:
 
 
 ROOT = Path(__file__).resolve().parents[1]
-REQUIRED_SCHEMAS = {"request.schema.json", "result.schema.json", "confirmation.schema.json", "lifecycle.schema.json"}
+REQUIRED_SCHEMAS = {"request.schema.json", "result.schema.json", "confirmation.schema.json", "lifecycle.schema.json", "presentation.schema.json"}
 REQUIRED_DOCS = {"SPEC.md", "SECURITY.md", "THREAT-MODEL.md", "UX-GUIDE.md", "STYLE-GUIDE.md", "CONFORMANCE.md"}
 
 

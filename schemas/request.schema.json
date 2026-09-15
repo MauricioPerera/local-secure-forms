@@ -11,7 +11,10 @@
     "purpose": {"type": "string", "minLength": 1, "maxLength": 4096, "pattern": "\\S"},
     "risk": {"enum": ["low", "medium", "high", "irreversible"]},
     "initiator": {"enum": ["user", "agent", "system"]},
-    "presentation": {"enum": ["auto", "form", "terminal", "headless", "manual"]},
+    "presentation": {"oneOf": [
+      {"enum": ["auto", "form", "terminal", "headless", "manual"]},
+      {"$ref": "presentation.schema.json"}
+    ]},
     "fields": {
       "type": "array",
       "minItems": 1,

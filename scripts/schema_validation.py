@@ -31,6 +31,13 @@ def validate(data, schema_name='request.schema.json'):
             names = [field['name'] for field in data['fields']]
             if len(set(names)) != len(names):
                 raise ValueError('duplicate_fields')
+            presentation = data.get('presentation')
+            if isinstance(presentation, dict):
+                sections = presentation.get('layout', {}).get('sections')
+                if sections is not None:
+                    displayed = [name for section in sections for name in section['fields']]
+                    if len(displayed) != len(set(displayed)) or set(displayed) != set(names):
+                        raise ValueError('presentation_fields_mismatch')
             confirmation = data.get('confirmation', {})
             if ('request_id' in confirmation and
                     confirmation['request_id'] != data.get('request_id')):

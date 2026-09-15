@@ -11,6 +11,7 @@ from types import MappingProxyType
 from uuid import uuid4
 
 from .core import ConfirmationPolicy, FieldSpec, LSFARequest, RiskLevel
+from .presentation import PresentationRegistry
 
 
 @dataclass(frozen=True)
@@ -73,7 +74,8 @@ class VerifiedConfirmation:
 
 
 class LocalClient:
-    def __init__(self, policies, store, verify_confirmation, *, clock=time.time):
+    def __init__(self, policies, store, verify_confirmation, *, clock=time.time,
+                 presentations=None):
         if not policies or not callable(verify_confirmation) or not callable(clock):
             raise ValueError('client_configuration_invalid')
         for name, policy in policies.items():
@@ -85,6 +87,9 @@ class LocalClient:
         self.store = store
         self.verify_confirmation = verify_confirmation
         self.clock = clock
+        self.presentations = presentations or PresentationRegistry()
+        if not isinstance(self.presentations, PresentationRegistry):
+            raise ValueError('client_configuration_invalid')
         self._key = secrets.token_bytes(32)
 
     def digest(self, value):
@@ -105,6 +110,7 @@ class LocalClient:
             raise ValueError('purge_requires_irreversible')
         if request.fields != policy.fields or request.validation['preflight'] != policy.preflight_name:
             raise ValueError('request_policy_mismatch')
+        self.presentations.resolve(request)
         levels = list(RiskLevel)
         risk = max((RiskLevel(request.risk), RiskLevel(policy.minimum_risk)), key=levels.index)
         request = replace(request, risk=risk, request_id=request.request_id or uuid4().hex)
@@ -113,6 +119,11 @@ class LocalClient:
         binding = self.request_binding(request, issued, expires)
         self.store.issue(request.request_id, binding, expires, issued)
         return IssuedRequest(request, issued, expires, binding)
+
+    def resolve_presentation(self, ticket):
+        """Devuelve un plan visual confiable sin valores ni controles de confirmación."""
+        self.validate_ticket(ticket)
+        return self.presentations.resolve(ticket.request)
 
     def validate_ticket(self, ticket):
         if not isinstance(ticket, IssuedRequest):

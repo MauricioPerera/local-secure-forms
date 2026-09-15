@@ -33,6 +33,8 @@ guardar la credencial sin devolver la contraseña al agente.
 - [examples/connect-email.json](examples/connect-email.json): solicitud de ejemplo.
 - [examples/send-email.json](examples/send-email.json): acción con confirmación de alto riesgo.
 - `python scripts/validate_examples.py`: valida los ejemplos contra esquemas compuestos Draft 2020-12 (instalar `requirements-dev.txt`).
+- Presentación declarativa 0.3: generación automática, secciones seguras o perfiles visuales registrados localmente, sin HTML ni código del agente.
+- [RELEASE-v0.3.md](RELEASE-v0.3.md): contrato y límites de la extensión de presentación.
 - [RELEASE-v0.2.md](RELEASE-v0.2.md): notas de la versión experimental 0.2.
 
 ## Estado

@@ -24,6 +24,9 @@ no expone secretos.
 - no incluye secretos en resultados, argumentos, logs o temporales;
 - no permite confirmación por parte del agente;
 - invalida confirmaciones consumidas o expiradas;
+- rechaza layouts que añaden, ocultan o repiten campos;
+- resuelve perfiles visuales únicamente desde un registro local confiable;
+- mantiene secretos y confirmación fuera de la superficie declarativa;
 - ofrece recuperación o informa estados parciales;
 - mantiene controles equivalentes en GUI, terminal y modo manual.
 

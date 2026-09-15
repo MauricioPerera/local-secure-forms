@@ -69,6 +69,11 @@ are the execution core, not an automatic JSON deserializer. Validate wire data
 with the composed schemas and semantic checks before translating it. The
 registered client policy remains authoritative even after structural validation.
 `presentation` defaults to `auto` when omitted. The adapter is selected locally.
+The optional 0.3 declarative extension is resolved with
+`PresentationRegistry`. Inline sections are inert and must cover every policy
+field exactly once. Named profiles are installed by trusted client code; the
+agent supplies only their identifier. Renderers must keep secret controls and
+confirmation outside profile-owned content.
 Public defaults are UI hints, never automatic executor input. Private/secret
 defaults are forbidden. Collected values must independently pass validation.
 

@@ -15,6 +15,19 @@ recibe secretos ni puede confirmar por el usuario.
 6. Añadir confirmación humana explícita y los factores exigidos por riesgo.
 7. Ejecutar el kit de conformidad antes de publicar una versión.
 
+## Presentación dinámica opcional
+
+Para una interfaz generada, renderiza directamente los `fields`. Para formato
+dinámico, acepta únicamente `PresentationSpec`: sus secciones organizan todos
+los campos sin cambiar tipos o sensibilidad. Para una experiencia especializada,
+registra localmente un `PresentationSpec` en `PresentationRegistry` y permite
+que la solicitud lo seleccione por nombre. Un perfil desconocido se rechaza.
+
+El renderer puede ignorar sugerencias que no soporte y volver a `auto`. Debe
+usar controles propios para secretos y una superficie separada para confirmar.
+No conviertas presentación en HTML, callbacks ni código proporcionado por el
+agente.
+
 ## Reglas de seguridad
 
 - Nunca coloques contraseñas, tokens o PIN en JSON de salida, logs, URLs,

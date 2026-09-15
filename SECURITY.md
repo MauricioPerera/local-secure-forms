@@ -20,6 +20,11 @@ riesgo requieren PIN local y las irreversibles requieren además un segundo
 factor. Los códigos no deben aparecer en logs, argumentos, historial,
 resultados ni telemetría.
 
+La presentación declarativa es contenido no confiable. Solo puede organizar
+campos autorizados. No se ejecuta HTML o JavaScript de la solicitud, no se
+habilita red y ninguna plantilla controla secretos, PIN, TOTP o confirmación.
+Los perfiles visuales son recursos locales registrados por el cliente.
+
 Siempre que sea posible, el borrado debe ser reversible (`soft_delete` y
 `restore`). El borrado permanente (`purge`) debe ser una operación distinta,
 con advertencia clara y confirmación reforzada.
