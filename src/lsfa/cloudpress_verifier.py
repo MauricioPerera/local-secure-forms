@@ -103,7 +103,7 @@ def load_record(profile: str, backend=keyring) -> dict:
     return decode_record(raw)
 
 
-def verify(profile: str = DEFAULT_PROFILE):
+def verifier_for_profile(profile: str = DEFAULT_PROFILE):
     """Return a broker-compatible verifier bound to one enrolled profile."""
     profile = validate_profile(profile)
 
@@ -130,6 +130,11 @@ def verify(profile: str = DEFAULT_PROFILE):
             return None
 
     return local_verify
+
+
+def verify(summary, method, binding, expires_at):
+    """Callback exported for ``--verifier src.lsfa.cloudpress_verifier:verify``."""
+    return verifier_for_profile()(summary, method, binding, expires_at)
 
 
 def provisioning_uri(secret: str, profile: str) -> str:
