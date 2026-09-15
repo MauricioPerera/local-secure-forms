@@ -27,8 +27,21 @@
 .security-list { border-left: 3px solid var(--green); padding-left: 24px; }
 .security-list p { padding: 7px 0; }
 .security-list b { color: var(--ink); }
+.integration .split { align-items: center; }
+.integration .split p { color: #b9cbc0; }
+.dark-ghost { color: #eff6ef; border-color: #527168; }
+.dark-ghost:hover { color: #fff; border-color: #91ad9d; }
+.boundary { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 16px; }
+.boundary > div { min-height: 150px; display: flex; flex-direction: column; justify-content: space-between; border: 1px solid #527168; border-radius: 14px; padding: 22px; color: #d8e9dd; }
+.boundary > div.trusted { border-color: var(--green); background: rgba(184,242,139,.08); }
+.boundary small { color: #91ad9d; letter-spacing: .12em; font-weight: 800; }
+.boundary strong { font-size: 1.08rem; }
+.boundary > span { color: var(--green); font-size: 1.5rem; }
+.integration-note { color: #9bb0a5; font-size: .84rem; margin: 38px 0 0; }
 @media (max-width: 720px) {
   .doc-grid, .guardrails { grid-template-columns: 1fr; gap: 22px; }
   .demo-confirm { align-items: flex-start; flex-direction: column; }
   .docs-hero { padding: 75px 0 55px; }
+  .boundary { grid-template-columns: 1fr; }
+  .boundary > span { transform: rotate(90deg); justify-self: center; }
 }

@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Integración técnica opcional entre LSFA y FastWebMCP.">
+  <title>FastWebMCP · Integraciones LSFA</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="presentation.css">
+</head>
+<body>
+  <a class="skip" href="#main">Ir al contenido</a>
+  <header class="topbar"><a class="brand" href="./" aria-label="Volver a LSFA"><span class="mark">⌁</span> LSFA</a><nav aria-label="Documentación"><a href="#boundary">Responsabilidades</a><a href="#flow">Flujo</a><a href="#start">Implementación</a><a href="https://github.com/MauricioPerera/local-secure-forms">GitHub</a></nav></header>
+  <main id="main" class="docs wrap">
+    <div class="docs-hero"><div class="eyebrow"><span class="pulse"></span>Integración de referencia · FastWebMCP 0.5.0</div><h1>LSFA + FastWebMCP</h1><p class="lead">Una forma de ofrecer acciones sensibles a agentes web manteniendo los secretos, la política y la aprobación dentro de un broker local confiable.</p></div>
+    <section id="boundary"><div class="section-kicker">LÍMITE DE CONFIANZA</div><h2>Conectar no significa mezclar responsabilidades</h2><div class="doc-grid"><article><b>01</b><h3>FastWebMCP</h3><p>Registra la herramienta WebMCP, valida el sobre público y transporta únicamente intención no sensible.</p></article><article><b>02</b><h3>Broker LSFA</h3><p>Resuelve la política local, presenta el formulario, captura secretos y solicita la confirmación requerida.</p></article><article><b>03</b><h3>Agente</h3><p>Recibe un resultado estructurado; no recibe contraseñas, tokens ni los valores sensibles capturados.</p></article></div></section>
+    <section id="flow" class="docs-section"><div class="section-kicker">FLUJO</div><h2>De una herramienta web a una decisión local</h2><div class="security-list"><p><b>1.</b> El agente invoca una herramienta registrada por FastWebMCP con una operación y campos no sensibles.</p><p><b>2.</b> El adaptador entrega la solicitud al broker LSFA configurado por la aplicación.</p><p><b>3.</b> LSFA aplica su contrato: política, riesgo, interfaz local, validación y confirmación.</p><p><b>4.</b> El broker ejecuta o rechaza la operación y devuelve el resultado LSFA al adaptador.</p><p><b>5.</b> FastWebMCP entrega al agente ese resultado, sin ampliar sus permisos ni revelar secretos.</p></div></section>
+    <section id="start" class="docs-section"><div class="section-kicker">IMPLEMENTACIÓN</div><h2>El adaptador está en FastWebMCP</h2><p>La integración se distribuye con <code>fastwebmcp@0.5.0</code>. La aplicación aporta su broker LSFA; el paquete no instala una GUI, un almacén de credenciales ni una política por cuenta propia.</p><div class="code-card wide"><div class="code-label">INSTALACIÓN</div><pre><code>npm install fastwebmcp@^0.5.0</code></pre></div><div class="actions"><a class="button primary" href="https://mauricioperera.github.io/fastwebmcp/lsfa.html">Abrir guía y API completa</a><a class="button ghost" href="https://www.npmjs.com/package/fastwebmcp">Ver paquete npm ↗</a></div></section>
+    <section class="docs-section"><div class="section-kicker">ALCANCE</div><h2>Dos proyectos independientes</h2><p>LSFA sigue siendo un protocolo local y no es MCP. FastWebMCP es una integración opcional: no forma parte del contrato normativo de LSFA, no cambia sus esquemas y no convierte el navegador en una frontera confiable.</p></section>
+  </main>
+  <footer class="footer wrap"><span>LSFA · Integraciones</span><a href="./">← Volver a la página principal</a></footer>
+</body>
+</html>

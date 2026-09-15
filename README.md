@@ -46,6 +46,20 @@ La primera implementación es [email-agent-kdd](https://github.com/MauricioPerer
 que usa este flujo para configurar cuentas IMAP/SMTP, comprobar la conexión y
 guardar la credencial sin devolver la contraseña al agente.
 
+## Integración opcional con FastWebMCP
+
+[FastWebMCP](https://github.com/MauricioPerera/fastwebmcp) 0.5.0 incluye un
+adaptador de referencia para exponer operaciones LSFA mediante WebMCP. La
+integración mantiene separadas las responsabilidades: FastWebMCP transporta
+la intención no sensible y el broker LSFA local conserva la política, la
+captura de secretos, la confirmación y la ejecución.
+
+LSFA no es MCP y no depende de FastWebMCP. El adaptador es una integración
+opcional entre proyectos independientes y no modifica el contrato normativo
+ni los esquemas LSFA. Consulta la
+[guía técnica de integración](https://mauricioperera.github.io/local-secure-forms/fastwebmcp.html)
+o la [documentación del adaptador en FastWebMCP](https://mauricioperera.github.io/fastwebmcp/lsfa.html).
+
 ## Documentos
 
 - [SPEC.md](SPEC.md): protocolo y requisitos de conformidad.

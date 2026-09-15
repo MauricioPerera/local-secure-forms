@@ -10,6 +10,31 @@ const copy = {
   }
 };
 
+Object.assign(copy.es, {
+  navIntegrations: "Integraciones", integrationKicker: "INTEGRACIÓN OPCIONAL",
+  integrationTitle: "WebMCP comunica la intención.<br>LSFA protege la decisión.",
+  integrationText: "FastWebMCP puede exponer operaciones LSFA a agentes web sin trasladar secretos al navegador ni al agente. El adaptador transporta una solicitud no sensible; el broker local confiable conserva la captura, la política, la confirmación y la ejecución.",
+  integrationDocs: "Ver cómo se integran", fastwebmcpGuide: "Guía en FastWebMCP ↗",
+  intentOnly: "Intención no sensible", trustedActions: "Secretos · política · confirmación",
+  integrationNote: "LSFA no es MCP y no depende de FastWebMCP. Esta es una integración de referencia entre proyectos independientes."
+});
+Object.assign(copy.en, {
+  navIntegrations: "Integrations", integrationKicker: "OPTIONAL INTEGRATION",
+  integrationTitle: "WebMCP carries intent.<br>LSFA protects the decision.",
+  integrationText: "FastWebMCP can expose LSFA operations to web agents without moving secrets into the browser or agent. The adapter carries a non-sensitive request; the trusted local broker retains capture, policy, confirmation, and execution.",
+  integrationDocs: "See how they integrate", fastwebmcpGuide: "FastWebMCP guide ↗",
+  intentOnly: "Non-sensitive intent", trustedActions: "Secrets · policy · confirmation",
+  integrationNote: "LSFA is not MCP and does not depend on FastWebMCP. This is a reference integration between independent projects."
+});
+Object.assign(copy.pt, {
+  navIntegrations: "Integrações", integrationKicker: "INTEGRAÇÃO OPCIONAL",
+  integrationTitle: "WebMCP comunica a intenção.<br>LSFA protege a decisão.",
+  integrationText: "FastWebMCP pode expor operações LSFA a agentes web sem transferir segredos para o navegador ou o agente. O adaptador transporta uma solicitação não sensível; o broker local confiável mantém captura, política, confirmação e execução.",
+  integrationDocs: "Ver como se integram", fastwebmcpGuide: "Guia no FastWebMCP ↗",
+  intentOnly: "Intenção não sensível", trustedActions: "Segredos · política · confirmação",
+  integrationNote: "LSFA não é MCP e não depende do FastWebMCP. Esta é uma integração de referência entre projetos independentes."
+});
+
 const select = document.querySelector("#language");
 const nodes = document.querySelectorAll("[data-i18n]");
 function setLanguage(language) {
