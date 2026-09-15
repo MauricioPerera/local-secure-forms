@@ -40,6 +40,18 @@ El cliente valida que todas las secciones cubran exactamente los campos de la
 operación. Los perfiles especializados se registran mediante
 `PresentationRegistry`; una referencia desconocida se rechaza de forma segura.
 
+## Companion CloudPress + FastWebMCP
+
+[`examples/cloudpress_loopback_broker.py`](examples/cloudpress_loopback_broker.py) es un companion de referencia para CloudPress. Escucha sólo en loopback, valida el origen configurado, liga la ejecución a una URL exacta de CloudPress y utiliza el ciclo de autorización de un solo uso del SDK. Requiere un verificador local real configurado mediante `--verifier modulo:funcion`; no incluye PIN/TOTP falso ni ejecuta acciones irreversibles sin una confirmación local conforme.
+
+```text
+python examples/cloudpress_loopback_broker.py --origin https://cms.example --verifier my_trusted_verifier:verify
+```
+
+El verificador recibe `(summary, method, binding, expires_at)` y, sólo después de realizar la autenticación local exigida, devuelve `VerifiedConfirmation(binding, method, expires_at)`. Un `True`, una cadena o un JSON no son confirmación válida. Para las acciones irreversibles, `method` es `pin_and_totp`; para recuperación TOTP, `pin`.
+
+El mismo companion atiende la recuperación TOTP de CloudPress en la ruta loopback /v1/cloudpress/totp-recovery. CloudPress verifica primero el código de Google Authenticator o un código de respaldo; sólo entonces LSFA solicita el PIN local (riesgo high) y ejecuta el restablecimiento de contraseña ligado a la solicitud. Los códigos, contraseñas y tokens no se devuelven al agente.
+
 ## Caso de referencia
 
 La primera implementación es [email-agent-kdd](https://github.com/MauricioPerera/email-agent-kdd),
