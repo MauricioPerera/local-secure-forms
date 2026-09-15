@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Documentación técnica de la presentación declarativa LSFA 0.3.">
+  <title>Presentación 0.3 · LSFA</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="presentation.css">
+</head>
+<body>
+  <a class="skip" href="#main">Ir al contenido</a>
+  <header class="topbar"><a class="brand" href="./" aria-label="Volver a LSFA"><span class="mark">⌁</span> LSFA</a><nav aria-label="Documentación"><a href="#contract">Contrato</a><a href="#profiles">Perfiles</a><a href="#security">Seguridad</a><a href="https://github.com/MauricioPerera/local-secure-forms">GitHub</a></nav></header>
+  <main id="main" class="docs wrap">
+    <div class="docs-hero"><div class="eyebrow"><span class="pulse"></span>Extensión experimental · 0.3</div><h1>Presentación declarativa segura</h1><p class="lead">Formularios generados y organizados en tiempo de presentación, sin convertir el formato visual en código o autoridad.</p></div>
+    <section id="contract"><div class="section-kicker">CONTRATO</div><h2>Tres formas de presentar la misma operación</h2><div class="doc-grid"><article><b>01</b><h3>Automática</h3><p>El renderer deriva controles accesibles directamente de los campos autorizados.</p><code>"presentation": "auto"</code></article><article><b>02</b><h3>Layout declarativo</h3><p>La solicitud agrupa y ordena todos los campos mediante secciones inertes.</p><code>"mode": "form"</code></article><article><b>03</b><h3>Perfil local</h3><p>Una interfaz especializada se selecciona por nombre desde el registro confiable.</p><code>"profile": "account_v1"</code></article></div></section>
+    <section class="docs-section"><div class="code-card wide"><div class="code-label">SOLICITUD</div><pre><code>{
+  <span>"presentation"</span>: {
+    <span>"mode"</span>: <i>"form"</i>,
+    <span>"locale"</span>: <i>"es"</i>,
+    <span>"theme"</span>: <i>"system"</i>,
+    <span>"layout"</span>: { <span>"sections"</span>: [
+      { <span>"id"</span>: <i>"account"</i>, <span>"title"</span>: <i>"Tu cuenta"</i>,
+        <span>"fields"</span>: [<i>"email"</i>, <i>"password"</i>] },
+      { <span>"id"</span>: <i>"advanced"</i>, <span>"title"</span>: <i>"Configuración avanzada"</i>,
+        <span>"fields"</span>: [<i>"imap_host"</i>, <i>"imap_port"</i>], <span>"collapsed"</span>: <strong>true</strong> }
+    ]}
+  }
+}</code></pre></div><p>Las secciones deben contener exactamente una vez todos los campos de la operación. Si falta uno, aparece uno desconocido o se repite, la solicitud falla antes de capturar información.</p></section>
+    <section id="profiles" class="docs-section"><div class="section-kicker">PERFILES CONFIABLES</div><h2>El agente referencia; el cliente instala</h2><p>Un perfil no viaja dentro de la solicitud. La aplicación registra localmente una plantilla <code>PresentationSpec</code> y la solicitud solo puede seleccionar su identificador. <code>PresentationRegistry</code> rechaza perfiles desconocidos y no acepta plantillas que a su vez apunten a otro perfil.</p><div class="code-card wide"><pre><code>registry = PresentationRegistry({
+  <i>"account_v1"</i>: PresentationSpec(
+    mode=<i>"form"</i>,
+    sections=(...)
+  )
+})
+
+client = LocalClient(
+  policies, store, verify_confirmation,
+  presentations=registry
+)</code></pre></div></section>
+    <section id="security" class="docs-section"><div class="section-kicker">FRONTERA DE SEGURIDAD</div><h2>La presentación nunca autoriza</h2><div class="security-list"><p><b>El agente puede sugerir:</b> modo, idioma, tema, orden, secciones o el nombre de un perfil permitido.</p><p><b>La política local controla:</b> campos, tipos, sensibilidad, validadores, riesgo, método de confirmación y ejecutor.</p><p><b>El cliente renderiza siempre:</b> secretos, resumen de la acción, PIN, TOTP y botones de confirmación.</p><p><b>No existe superficie para:</b> HTML, JavaScript, URLs, callbacks, red o acciones declaradas por el agente.</p></div></section>
+    <section class="docs-section"><div class="section-kicker">COMPATIBILIDAD</div><h2>LSFA sigue sin ser MCP</h2><p>La extensión toma únicamente la separación conceptual entre operación y presentación. No usa transporte MCP, recursos <code>ui://</code>, iframes ni llamadas a herramientas. Las cadenas de presentación de LSFA 0.2 continúan siendo válidas y GUI, terminal y manual/headless conservan el mismo ciclo de autorización.</p><div class="actions"><a class="button primary" href="https://github.com/MauricioPerera/local-secure-forms/blob/main/specs/lsfa-presentation.md">Leer especificación</a><a class="button ghost" href="https://github.com/MauricioPerera/local-secure-forms/blob/main/examples/dynamic-presentation.json">Ver ejemplo JSON</a></div></section>
+  </main>
+  <footer class="footer wrap"><span>LSFA · Presentation 0.3</span><a href="./">← Volver a la página principal</a></footer>
+</body>
+</html>

@@ -6,6 +6,7 @@
   <meta name="description" content="Local Secure Forms for Agent CLIs — secure, minimal forms for sensitive data.">
   <title>LSFA · Local Secure Forms for Agent CLIs</title>
   <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="presentation.css">
 </head>
 <body>
   <a class="skip" href="#main" data-i18n="skip">Ir al contenido</a>
@@ -14,6 +15,7 @@
     <nav aria-label="Primary navigation">
       <a href="#why" data-i18n="navWhy">Por qué</a>
       <a href="#flow" data-i18n="navFlow">Cómo funciona</a>
+      <a href="#presentation" data-i18n="navPresentation">Presentación</a>
       <a href="https://github.com/MauricioPerera/local-secure-forms" data-i18n="navSpec">Especificación</a>
     </nav>
     <label class="language"><span class="sr-only" data-i18n="languageLabel">Idioma</span>
@@ -25,7 +27,7 @@
 
   <main id="main">
     <section class="hero wrap">
-      <div class="eyebrow"><span class="pulse"></span><span data-i18n="eyebrow">Propuesta experimental · v0.1</span></div>
+      <div class="eyebrow"><span class="pulse"></span><span data-i18n="eyebrow">LSFA 0.2 · Presentación 0.3 experimental</span></div>
       <h1 data-i18n="heroTitle">Formularios mínimos.<br><em>Secretos fuera del agente.</em></h1>
       <p class="lead" data-i18n="heroLead">Un estándar pequeño para que los agentes de terminal soliciten datos sensibles sin exponerlos, sin comandos complejos y sin construir una aplicación completa.</p>
       <div class="actions"><a class="button primary" href="https://github.com/MauricioPerera/local-secure-forms" data-i18n="readSpec">Leer la propuesta →</a><a class="button ghost" href="https://github.com/MauricioPerera/email-agent-kdd" data-i18n="seeReference">Ver implementación</a></div>
@@ -45,8 +47,10 @@
   <span>"credential_stored"</span>: <strong>true</strong>
 }</code></pre><p data-i18n="codeNote">La contraseña nunca aparece en la respuesta, argumentos, logs ni historial de shell.</p></div></div></div></section>
 
+    <section id="presentation" class="section wrap presentation"><div class="section-kicker" data-i18n="presentationKicker">PRESENTACIÓN 0.3</div><div class="split"><div><h2 data-i18n="presentationTitle">El formulario se adapta.<br>La seguridad no.</h2><p data-i18n="presentationText">LSFA puede organizar los campos en secciones al momento de presentar una operación o elegir un perfil visual instalado localmente. El agente sugiere la forma; el cliente conserva la autoridad.</p><a class="text-link" href="presentation.html" data-i18n="presentationDocs">Leer documentación técnica →</a></div><div class="form-demo" aria-label="Ejemplo de formulario declarativo"><div class="demo-chrome"><span>LSFA · <b data-i18n="trustedClient">Cliente confiable</b></span><span class="risk" data-i18n="mediumRisk">Riesgo medio</span></div><div class="demo-content"><h3 data-i18n="demoTitle">Conectar una cuenta</h3><label><span>Email</span><span class="fake-input">usuario@ejemplo.com</span></label><label><span data-i18n="password">Contraseña</span><span class="fake-input secret">••••••••••••</span></label><details><summary data-i18n="advanced">Configuración avanzada</summary></details></div><div class="demo-confirm"><span data-i18n="confirmationOwned">La confirmación siempre pertenece al cliente</span><button type="button" disabled data-i18n="confirm">Sí, confirmar</button></div></div></div><div class="guardrails"><span data-i18n="guard1">Sin HTML ni scripts del agente</span><span data-i18n="guard2">Sin campos añadidos u ocultos</span><span data-i18n="guard3">Secretos y confirmación protegidos</span></div></section>
+
     <section class="section wrap reference"><div class="section-kicker" data-i18n="refKicker">PRIMER CASO DE USO</div><div class="split"><h2 data-i18n="refTitle">Configuración de correo sin adivinar servidores.</h2><p data-i18n="refText">email-agent-kdd usa LSFA como referencia: descubre IMAP/SMTP, prueba la autenticación antes de guardar y funciona con formulario gráfico, terminal o modo manual.</p></div><a class="text-link" href="https://github.com/MauricioPerera/email-agent-kdd" data-i18n="openCli">Explorar email-agent-kdd →</a></section>
-    <section class="closing"><div class="wrap"><h2 data-i18n="closingTitle">Una interfaz completa cuando hace falta.<br><em>Una sola pregunta cuando basta.</em></h2><p data-i18n="closingText">LSFA está abierto a implementaciones, críticas y nuevos casos de uso.</p><a class="button light" href="https://github.com/MauricioPerera/local-secure-forms/issues" data-i18n="contribute">Participar en la propuesta →</a></div></section>
+    <section class="closing"><div class="wrap"><h2 data-i18n="closingTitle">Una interfaz completa cuando hace falta.<br><em>Una sola pregunta cuando basta.</em></h2><p data-i18n="closingText">LSFA está abierto a implementaciones, críticas y nuevos casos de uso.</p><div class="actions"><a class="button light" href="presentation.html" data-i18n="technicalDocs">Documentación técnica</a><a class="button ghost" href="https://github.com/MauricioPerera/local-secure-forms/issues" data-i18n="contribute">Participar en la propuesta →</a></div></div></section>
   </main>
   <footer class="footer wrap"><span>LSFA · 2026</span><span data-i18n="footerText">Propuesta experimental para agentes locales.</span><a href="https://github.com/MauricioPerera/local-secure-forms">GitHub ↗</a></footer>
   <script src="app.js"></script>

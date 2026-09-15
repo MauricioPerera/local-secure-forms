@@ -14,6 +14,32 @@ factor para acciones de mayor impacto, además de separar borrado reversible de
 borrado permanente. El formulario puede abrirse por iniciativa del usuario o
 por solicitud de un agente, manteniendo el mismo límite de seguridad.
 
+La extensión de presentación 0.3 permite que el formulario se genere y se
+organice en el momento de mostrarlo. Una solicitud puede sugerir secciones,
+idioma y tema, o seleccionar por nombre un perfil instalado localmente. Esa
+presentación no puede añadir u ocultar campos, ejecutar HTML o scripts, cambiar
+la política de riesgo ni controlar secretos o confirmaciones.
+
+```json
+{
+  "presentation": {
+    "mode": "form",
+    "locale": "es",
+    "theme": "system",
+    "layout": {
+      "sections": [
+        {"id": "account", "title": "Tu cuenta", "fields": ["email", "password"]},
+        {"id": "advanced", "title": "Configuración avanzada", "fields": ["imap_host", "imap_port"], "collapsed": true}
+      ]
+    }
+  }
+}
+```
+
+El cliente valida que todas las secciones cubran exactamente los campos de la
+operación. Los perfiles especializados se registran mediante
+`PresentationRegistry`; una referencia desconocida se rechaza de forma segura.
+
 ## Caso de referencia
 
 La primera implementación es [email-agent-kdd](https://github.com/MauricioPerera/email-agent-kdd),
@@ -27,6 +53,9 @@ guardar la credencial sin devolver la contraseña al agente.
 - [SECURITY.md](SECURITY.md): reglas de seguridad para implementaciones.
 - [IMPLEMENTATION-GUIDE.md](IMPLEMENTATION-GUIDE.md): ruta de adopción para implementadores.
 - [SDK-MIGRATION.md](SDK-MIGRATION.md): API endurecida, pruebas y límites de confianza del SDK.
+- [specs/lsfa-presentation.md](specs/lsfa-presentation.md): presentación automática, composición declarativa y perfiles locales.
+- [schemas/presentation.schema.json](schemas/presentation.schema.json): contrato JSON de presentación 0.3.
+- [examples/dynamic-presentation.json](examples/dynamic-presentation.json): formulario organizado dinámicamente.
 - [CONTRIBUTING.md](CONTRIBUTING.md): reglas para contribuir al protocolo.
 - [FEEDBACK.md](FEEDBACK.md): preguntas y canal para retroalimentación.
 - [specs/lsfa-attachments.md](specs/lsfa-attachments.md): extensión segura para adjuntos.
@@ -39,7 +68,8 @@ guardar la credencial sin devolver la contraseña al agente.
 
 ## Estado
 
-Esta es una propuesta experimental 0.2, no un estándar aprobado. Se buscan
+LSFA 0.2 y su extensión de presentación 0.3 son propuestas experimentales, no
+un estándar aprobado. Se buscan
 implementaciones, críticas y casos de uso antes de proponer una extensión a
 protocolos de agentes existentes.
 
