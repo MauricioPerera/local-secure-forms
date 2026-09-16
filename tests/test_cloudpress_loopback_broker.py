@@ -1,4 +1,5 @@
 import importlib.util
+import json
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
@@ -33,6 +34,52 @@ def test_cloudpress_payload_binds_exact_origin_url_and_irreversible_policy():
     assert request.operation == "cloudpress_irreversible_action"
     assert request.risk == "irreversible"
     assert values["execution_token"] == "opaque-capability-token"
+
+
+def test_agent_capability_requires_exact_origin_and_agent_proxy_rejects_purge(monkeypatch):
+    expires = (datetime.now(timezone.utc) + timedelta(days=1)).isoformat()
+    payload = {"protocol": "lsfa", "version": "0.2", "origin": "https://cms.example", "capability": {"id": "capability-qa-0001", "token": "A" * 44, "expires_at": expires}}
+    request, values = BROKER.parse_agent_capability_payload(payload, "https://cms.example")
+    assert request.operation == "cloudpress_agent_access"
+    assert values["capability_token"] == "A" * 44
+    monkeypatch.setattr(BROKER, "load_record", lambda _profile: {"enrolled": True})
+    saved = {}
+    monkeypatch.setattr(BROKER.keyring, "set_password", lambda service, account, value: saved.update(service=service, account=account, value=value))
+    assert BROKER.store_agent_capability(payload, "https://cms.example")["status"] == "accepted"
+    assert saved["service"] == BROKER.AGENT_CAPABILITY_SERVICE
+    assert "A" * 44 in saved["value"]
+    with pytest.raises(ValueError, match="operation_not_allowed"):
+        BROKER.agent_api_request({"protocol": "lsfa", "version": "0.2", "origin": "https://cms.example", "request": {"path": "/api/admin/trash/7", "method": "DELETE", "body": {}}}, "https://cms.example")
+
+
+def test_agent_status_reports_enrollment_without_exposing_capability(monkeypatch):
+    monkeypatch.setattr(BROKER, "load_record", lambda _profile: {"enrolled": True})
+    monkeypatch.setattr(BROKER.keyring, "get_password", lambda _service, _account: json.dumps({"id": "capability-qa-0001", "token": "A" * 44, "expires_at": (datetime.now(timezone.utc) + timedelta(days=1)).isoformat()}))
+    status = BROKER.agent_status("https://cms.example")
+    assert status["enrolled"] is True and status["linked"] is True
+    assert "token" not in status
+
+
+def test_agent_capability_allows_bounded_clock_skew():
+    expires = (datetime.now(timezone.utc) + timedelta(days=7, hours=12)).isoformat()
+    payload = {"protocol": "lsfa", "version": "0.2", "origin": "https://cms.example", "capability": {"id": "capability-qa-0002", "token": "A" * 44, "expires_at": expires}}
+    assert BROKER.parse_agent_capability_payload(payload, "https://cms.example")[0].operation == "cloudpress_agent_access"
+
+
+def test_agent_proxy_identifies_the_companion(monkeypatch):
+    monkeypatch.setattr(BROKER.keyring, "get_password", lambda _service, _origin: json.dumps({"token": "A" * 44, "expires_at": (datetime.now(timezone.utc) + timedelta(days=1)).isoformat()}))
+    captured = {}
+    class Response:
+        status = 200
+        def read(self): return b'{"items":[]}'
+        def __enter__(self): return self
+        def __exit__(self, *_args): return False
+    def fake_urlopen(request, timeout):
+        captured["user_agent"] = request.get_header("User-agent")
+        return Response()
+    monkeypatch.setattr(BROKER, "urlopen", fake_urlopen)
+    assert BROKER.agent_api_request({"protocol": "lsfa", "version": "0.2", "origin": "https://cms.example", "request": {"path": "/api/admin/entries", "method": "GET"}}, "https://cms.example")[0] == 200
+    assert captured["user_agent"] == BROKER.COMPANION_USER_AGENT
 
 
 def test_cloudpress_payload_rejects_cross_origin_execution_url():
