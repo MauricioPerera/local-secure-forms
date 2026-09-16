@@ -44,6 +44,8 @@ operación. Los perfiles especializados se registran mediante
 
 [`examples/cloudpress_loopback_broker.py`](examples/cloudpress_loopback_broker.py) es un companion de referencia para CloudPress. Escucha sólo en loopback, valida el origen configurado, liga la ejecución a una URL exacta de CloudPress y utiliza el ciclo de autorización de un solo uso del SDK. Requiere un verificador local real configurado mediante `--verifier modulo:funcion`; no incluye PIN/TOTP falso ni ejecuta acciones irreversibles sin una confirmación local conforme.
 
+Para el proxy reversible del agente, `Origin` sólo es un control CORS. La vinculación entrega una credencial aleatoria de canal una sola vez al navegador autorizado; `/agent-api`, `/agent-approvals` y `/approvals` exigen esa credencial además del origen permitido. El bearer CloudPress permanece en el almacén seguro del sistema y ambas capas aplican una lista explícita de rutas y métodos. La cuenta del sistema operativo y su keyring son la frontera local: LSFA no aísla entre procesos que ya ejecutan con esa misma identidad y pueden leer sus credenciales.
+
 ```text
 python -m pip install -r requirements-companion.txt
 python -m src.lsfa.cloudpress_verifier enroll
