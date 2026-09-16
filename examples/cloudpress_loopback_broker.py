@@ -15,6 +15,7 @@ import json
 import keyring
 from pathlib import Path
 import re
+import secrets
 import sys
 from urllib.parse import urlparse
 from urllib.error import HTTPError
@@ -64,8 +65,9 @@ def parse_agent_capability_payload(payload: object, cloudpress_origin: str) -> t
     """Accept a one-time CloudPress capability for the local agent only.
 
     The raw bearer is deliberately accepted only at loopback, shown to neither
-    the agent nor terminal output, and stored solely in the OS credential store
-    after local PIN+TOTP confirmation.
+    the agent nor terminal output, and stored solely in the OS credential store.
+    The existing Admin session plus prior local enrolment authorize this binding;
+    irreversible actions still require their configured PIN/TOTP policy.
     """
     if not isinstance(payload, dict) or payload.get("protocol") != "lsfa" or payload.get("version") != "0.2" or payload.get("origin") != cloudpress_origin:
         raise ValueError("invalid_protocol")
@@ -91,7 +93,24 @@ def parse_agent_capability_payload(payload: object, cloudpress_origin: str) -> t
     return ticket, {"summary": json.dumps(summary, ensure_ascii=False, sort_keys=True), "capability_id": capability_id, "capability_token": token, "expires_at": str(expires_at)}
 
 
-def agent_status(cloudpress_origin: str) -> dict:
+def _stored_agent_capability(cloudpress_origin: str) -> dict:
+    try:
+        stored = json.loads(keyring.get_password(AGENT_CAPABILITY_SERVICE, cloudpress_origin) or "")
+        expiry = datetime.fromisoformat(stored["expires_at"].replace("Z", "+00:00"))
+        if not isinstance(stored.get("id"), str) or not isinstance(stored.get("token"), str) or datetime.now(timezone.utc) >= expiry:
+            return {}
+        return stored
+    except Exception:
+        return {}
+
+
+def channel_authorized(cloudpress_origin: str, provided: object) -> bool:
+    """Authenticate the browser channel; the Origin header remains only a CORS control."""
+    expected = _stored_agent_capability(cloudpress_origin).get("channel_token")
+    return isinstance(provided, str) and isinstance(expected, str) and secrets.compare_digest(provided, expected)
+
+
+def agent_status(cloudpress_origin: str, channel_token: object = None) -> dict:
     """Report whether this companion is enrolled and holds a live capability.
 
     This intentionally proves only local enrolment, never user presence and
@@ -104,16 +123,9 @@ def agent_status(cloudpress_origin: str) -> dict:
         enrolled = True
     except ValueError:
         enrolled = False
-    linked = False
-    expires_at = None
-    try:
-        stored = json.loads(keyring.get_password(AGENT_CAPABILITY_SERVICE, cloudpress_origin) or "")
-        expiry = datetime.fromisoformat(stored["expires_at"].replace("Z", "+00:00"))
-        if isinstance(stored.get("id"), str) and isinstance(stored.get("token"), str) and datetime.now(timezone.utc) < expiry:
-            linked, expires_at = True, stored["expires_at"]
-    except Exception:
-        pass
-    return {"ok": True, "enrolled": enrolled, "linked": linked, "expires_at": expires_at}
+    stored = _stored_agent_capability(cloudpress_origin)
+    linked = bool(stored)
+    return {"ok": True, "enrolled": enrolled, "linked": linked, "authorized": channel_authorized(cloudpress_origin, channel_token), "expires_at": stored.get("expires_at") if linked else None}
 
 
 def store_agent_capability(payload: object, cloudpress_origin: str) -> dict:
@@ -127,12 +139,45 @@ def store_agent_capability(payload: object, cloudpress_origin: str) -> dict:
     """
     _ticket, values = parse_agent_capability_payload(payload, cloudpress_origin)
     load_record(DEFAULT_PROFILE)
+    channel_token = secrets.token_urlsafe(32)
     keyring.set_password(AGENT_CAPABILITY_SERVICE, cloudpress_origin, json.dumps({
         "id": values["capability_id"],
         "token": values["capability_token"],
         "expires_at": values["expires_at"],
+        "channel_token": channel_token,
     }, sort_keys=True, separators=(",", ":")))
-    return {"status": "accepted", "operation": "cloudpress_agent_access", "checks": {"stored": True}}
+    return {"status": "accepted", "operation": "cloudpress_agent_access", "checks": {"stored": True}, "channel_token": channel_token}
+
+
+def agent_request_allowed(path: str, method: str) -> bool:
+    """Mirror CloudPress' narrow, server-enforced agent capability scope."""
+    route = urlparse(path).path
+    plugin = r"[a-z0-9][a-z0-9-]{2,47}"
+    taxonomy = r"[a-z0-9][a-z0-9-]{2,47}"
+    numeric_id = r"[1-9][0-9]*"
+    if method == "GET":
+        if route in {"/api/admin/entries", "/api/admin/users", "/api/admin/taxonomies", "/api/admin/menus", "/api/admin/plugins", "/api/admin/media", "/api/admin/plugin-schema", "/api/admin/plugin-meta", "/api/admin/blocks"}:
+            return True
+        return bool(re.fullmatch(fr"/api/admin/plugins/{plugin}/taxonomies/{taxonomy}", route))
+    if method == "POST":
+        if route in {"/api/admin/entries", "/api/admin/taxonomies", "/api/admin/menus", "/api/admin/plugins", "/api/admin/media-agent", "/api/admin/approvals"}:
+            return True
+        return bool(re.fullmatch(fr"/api/admin/trash/{numeric_id}", route) or re.fullmatch(fr"/api/admin/plugins/{plugin}/taxonomies/{taxonomy}", route))
+    if method == "PATCH":
+        return bool(re.fullmatch(fr"/api/admin/entries/{numeric_id}", route) or re.fullmatch(fr"/api/admin/users/{numeric_id}", route) or re.fullmatch(fr"/api/admin/plugins/{plugin}", route) or re.fullmatch(r"/api/admin/media/[^/]+", route))
+    if method == "PUT":
+        if route in {"/api/admin/taxonomies", "/api/admin/menus", "/api/admin/plugin-meta"}:
+            return True
+        return bool(re.fullmatch(fr"/api/admin/plugins/{plugin}/taxonomies/{taxonomy}/{numeric_id}", route))
+    return method == "DELETE" and bool(re.fullmatch(fr"/api/admin/entries/{numeric_id}", route))
+
+
+def _json_response(response, fallback_status: int) -> tuple[int, object]:
+    status = int(getattr(response, "status", fallback_status))
+    try:
+        return status, json.loads(response.read().decode("utf-8"))
+    except (UnicodeDecodeError, json.JSONDecodeError):
+        return status, {"error": "cloudpress_non_json_response", "remoteStatus": status}
 
 
 def agent_api_request(payload: object, cloudpress_origin: str) -> tuple[int, object]:
@@ -148,8 +193,7 @@ def agent_api_request(payload: object, cloudpress_origin: str) -> tuple[int, obj
     parsed = urlparse(path)
     if parsed.scheme or parsed.netloc or ".." in parsed.path.split("/"):
         raise ValueError("invalid_path")
-    allowed = method == "GET" or (method == "POST" and parsed.path in {"/api/admin/entries", "/api/admin/taxonomies", "/api/admin/menus", "/api/admin/plugins", "/api/admin/media-agent"}) or (method == "PATCH" and re.fullmatch(r"/api/admin/(entries|users|plugins)/[^/]+", parsed.path)) or (method == "PUT" and parsed.path in {"/api/admin/taxonomies", "/api/admin/menus", "/api/admin/plugin-meta"}) or (method == "DELETE" and re.fullmatch(r"/api/admin/entries/\d+", parsed.path))
-    if not allowed or parsed.path.startswith("/api/admin/approvals") or parsed.path.startswith("/api/admin/trash"):
+    if not agent_request_allowed(path, method):
         raise ValueError("operation_not_allowed")
     stored = keyring.get_password(AGENT_CAPABILITY_SERVICE, cloudpress_origin)
     try:
@@ -167,9 +211,9 @@ def agent_api_request(payload: object, cloudpress_origin: str) -> tuple[int, obj
     remote = Request(cloudpress_origin + path, method=method, headers=headers, data=data)
     try:
         with urlopen(remote, timeout=15) as response:  # nosec B310: exact configured origin and allowlist above
-            return response.status, json.loads(response.read().decode("utf-8"))
+            return _json_response(response, 200)
     except HTTPError as error:
-        return error.code, json.loads(error.read().decode("utf-8"))
+        return _json_response(error, error.code)
 
 
 def agent_approval_payload(payload: object, cloudpress_origin: str) -> dict:
@@ -340,26 +384,6 @@ def build_recovery_broker(cloudpress_origin: str, verifier, store_path: Path) ->
     return TerminalAdapter(lambda _request: None, confirm, client=client)
 
 
-def build_agent_capability_broker(cloudpress_origin: str, verifier, store_path: Path) -> TerminalAdapter:
-    """Stores an approved CloudPress bearer in the OS credential manager."""
-    def preflight(values):
-        return values.get("capability_id") and values.get("capability_token") and values.get("expires_at")
-
-    def execute(values):
-        keyring.set_password(AGENT_CAPABILITY_SERVICE, cloudpress_origin, json.dumps({
-            "id": values["capability_id"], "token": values["capability_token"], "expires_at": values["expires_at"],
-        }, sort_keys=True, separators=(",", ":")))
-        return {"stored": True}
-
-    policy = OperationPolicy(AGENT_CAPABILITY_FIELDS, "cloudpress_capability", preflight, execute, minimum_risk=RiskLevel.HIGH, check_names=("stored",))
-    def confirm(context, method):
-        return verified_receipt(verifier, context, method)
-    def verify_confirmation(proof, context, method):
-        return proof if isinstance(proof, VerifiedConfirmation) else None
-    client = LocalClient({"cloudpress_agent_access": policy}, AuthorizationStore(store_path), verify_confirmation)
-    return TerminalAdapter(lambda _request: None, confirm, client=client)
-
-
 def result_for(adapter: TerminalAdapter, request: LSFARequest, values: dict) -> dict:
     """Ejecuta el adaptador con valores ya validados, sin imprimir secretos."""
     # ThreadingHTTPServer can handle parallel browser requests. Do not mutate
@@ -379,13 +403,13 @@ def load_verifier(reference: str):
     return verifier
 
 
-def make_handler(adapter: TerminalAdapter, recovery_adapter: TerminalAdapter, capability_adapter: TerminalAdapter, cloudpress_origin: str):
+def make_handler(adapter: TerminalAdapter, recovery_adapter: TerminalAdapter, cloudpress_origin: str):
     class Handler(BaseHTTPRequestHandler):
         def send_cors(self):
             self.send_header("Access-Control-Allow-Origin", cloudpress_origin)
             self.send_header("Vary", "Origin")
             self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
-            self.send_header("Access-Control-Allow-Headers", "Content-Type")
+            self.send_header("Access-Control-Allow-Headers", "Content-Type, X-LSFA-Channel-Token")
             self.send_header("Access-Control-Allow-Private-Network", "true")
 
         def respond(self, status, payload):
@@ -410,13 +434,16 @@ def make_handler(adapter: TerminalAdapter, recovery_adapter: TerminalAdapter, ca
                 self.respond(200, {"ok": True})
                 return
             if self.path == "/v1/cloudpress/agent-status":
-                self.respond(200, agent_status(cloudpress_origin))
+                self.respond(200, agent_status(cloudpress_origin, self.headers.get("X-LSFA-Channel-Token")))
                 return
             self.respond(404, {"error_code": "not_found"})
 
         def do_POST(self):  # noqa: N802
             if self.path not in {"/v1/cloudpress/approvals", "/v1/cloudpress/totp-recovery", "/v1/cloudpress/agent-capabilities", "/v1/cloudpress/agent-api", "/v1/cloudpress/agent-approvals"} or self.headers.get("Origin") != cloudpress_origin:
                 self.respond(403, {"status": "failed", "operation": "cloudpress_irreversible_action", "error_code": "invalid_origin"})
+                return
+            if self.path in {"/v1/cloudpress/approvals", "/v1/cloudpress/agent-api", "/v1/cloudpress/agent-approvals"} and not channel_authorized(cloudpress_origin, self.headers.get("X-LSFA-Channel-Token")):
+                self.respond(401, {"status": "failed", "operation": "cloudpress_agent_access", "error_code": "invalid_channel"})
                 return
             try:
                 length = int(self.headers.get("Content-Length", "0"))
@@ -462,8 +489,7 @@ def main():
     verifier = load_verifier(args.verifier)
     adapter = build_broker(origin, verifier, Path(args.store))
     recovery_adapter = build_recovery_broker(origin, verifier, Path(args.store))
-    capability_adapter = build_agent_capability_broker(origin, verifier, Path(args.store))
-    ThreadingHTTPServer(("127.0.0.1", 9463), make_handler(adapter, recovery_adapter, capability_adapter, origin)).serve_forever()
+    ThreadingHTTPServer(("127.0.0.1", 9463), make_handler(adapter, recovery_adapter, origin)).serve_forever()
 
 
 if __name__ == "__main__":
