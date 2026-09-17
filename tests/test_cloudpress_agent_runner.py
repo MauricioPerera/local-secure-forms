@@ -35,6 +35,25 @@ def test_runner_translates_visual_editorial_plan_without_route_control():
     assert (trash.path, trash.method) == ("/api/admin/entries/7", "DELETE")
 
 
+def test_runner_carries_plan_content_id_for_server_postcondition():
+    calls = []
+
+    class Companion:
+        def execution(self, action, _task_id, _ordinal, **values):
+            calls.append((action, values))
+            return {"step": {"state": "running"} if action == "start_step" else {"taskCompleted": True}}
+
+        def call(self, _request, execution=None):
+            assert execution["ordinal"] == 1
+            return {"ok": True, "trashed": True}
+
+        def runtime(self, _action, **_values): return {"checkpoint": {}}
+
+    RUNNER.execute_assignment(Companion(), {"job": {"id": "job", "taskId": "00000000-0000-0000-0000-000000000000", "leaseId": "lease"}, "context": {"plan": [{"tool": "cloudpress_trash_content", "input": {"operation": "trash_content", "id": 7}}]}})
+    finished = next(values for action, values in calls if action == "finish_step")
+    assert finished["outcome"]["result"]["id"] == 7
+
+
 def test_runner_completes_one_task_scoped_step_without_bearer_access():
     calls = []
 

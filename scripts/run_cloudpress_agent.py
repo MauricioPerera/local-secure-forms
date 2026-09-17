@@ -169,7 +169,14 @@ def execute_assignment(companion: Companion, assignment: dict[str, Any]) -> dict
         execution = {"taskId": task_id, "ordinal": ordinal}
         try:
             response = companion.call(bounded_request(step), execution)
-            outcome = {"result": safe_result(response), "verification": {"verified": True, "evidenceLevel": "agent-attested"}}
+            result = safe_result(response)
+            # Delete/restore endpoints intentionally return only an `ok`
+            # marker.  The content id is already immutable plan input and is
+            # required by CloudPress for its server-side postcondition query.
+            supplied = step.get("input") or {}
+            if step.get("tool") in {"cloudpress_update_content", "cloudpress_trash_content", "cloudpress_restore_content"} and isinstance(supplied.get("id"), int):
+                result.setdefault("id", supplied["id"])
+            outcome = {"result": result, "verification": {"verified": True, "evidenceLevel": "agent-attested"}}
             # Persist the bounded checkpoint before finishing the final step:
             # finish_step may atomically complete the task and release the
             # runtime lease, after which another checkpoint must be rejected.
