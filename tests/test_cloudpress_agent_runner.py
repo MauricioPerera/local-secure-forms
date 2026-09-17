@@ -26,6 +26,15 @@ def test_non_read_step_requires_declared_bounded_request():
         raise AssertionError("El runner no debe inventar mutaciones administrativas.")
 
 
+def test_runner_translates_visual_editorial_plan_without_route_control():
+    draft = RUNNER.bounded_request({"tool": "cloudpress_create_draft", "input": {"operation": "create_draft", "title": "Borrador", "body": "Contenido"}})
+    assert (draft.path, draft.method, draft.body["status"]) == ("/api/admin/entries", "POST", "draft")
+    update = RUNNER.bounded_request({"tool": "cloudpress_update_content", "input": {"operation": "update_content", "id": 7, "title": "Actualizado"}})
+    assert (update.path, update.method, update.body) == ("/api/admin/entries/7", "PATCH", {"title": "Actualizado"})
+    trash = RUNNER.bounded_request({"tool": "cloudpress_trash_content", "input": {"operation": "trash_content", "id": 7}})
+    assert (trash.path, trash.method) == ("/api/admin/entries/7", "DELETE")
+
+
 def test_runner_completes_one_task_scoped_step_without_bearer_access():
     calls = []
 

@@ -102,6 +102,30 @@ def bounded_request(step: dict[str, Any]) -> AgentRequest:
         path = READ_RESOURCES.get(resource)
         if path:
             return AgentRequest(path, "GET")
+    # The daily CloudPress console emits these structured, human-readable
+    # fields for common editorial work.  They deliberately cannot choose an
+    # arbitrary route or method.
+    if tool == "cloudpress_create_draft" and supplied.get("operation") == "create_draft":
+        title = supplied.get("title")
+        if not isinstance(title, str) or not title.strip():
+            raise RunnerError("Un borrador requiere título.")
+        body = {key: supplied[key] for key in ("title", "slug", "excerpt", "body") if isinstance(supplied.get(key), str)}
+        return AgentRequest("/api/admin/entries", "POST", {"kind": "post", "status": "draft", **body})
+    if tool == "cloudpress_update_content" and supplied.get("operation") == "update_content":
+        identifier = supplied.get("id")
+        if not isinstance(identifier, int) or identifier < 1:
+            raise RunnerError("La actualización requiere un identificador de contenido válido.")
+        body = {key: supplied[key] for key in ("title", "excerpt", "body") if isinstance(supplied.get(key), str)}
+        if not body:
+            raise RunnerError("La actualización requiere al menos un campo.")
+        return AgentRequest(f"/api/admin/entries/{identifier}", "PATCH", body)
+    if tool in {"cloudpress_trash_content", "cloudpress_restore_content"} and supplied.get("operation") in {"trash_content", "restore_content"}:
+        identifier = supplied.get("id")
+        if not isinstance(identifier, int) or identifier < 1:
+            raise RunnerError("La operación requiere un identificador de contenido válido.")
+        if tool == "cloudpress_trash_content":
+            return AgentRequest(f"/api/admin/entries/{identifier}", "DELETE")
+        return AgentRequest(f"/api/admin/trash/{identifier}", "POST", {})
     request = supplied.get("request")
     if not isinstance(request, dict):
         raise RunnerError("El paso requiere una solicitud declarada en su plan.")
