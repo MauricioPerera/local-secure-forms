@@ -8,18 +8,23 @@ PIN, TOTP ni una confirmación simulada.
 from __future__ import annotations
 
 import argparse
+import base64
 from datetime import datetime, timezone
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+import hashlib
+import hmac
 import importlib
 import json
 import keyring
+import os
 from pathlib import Path
 import re
 import secrets
 import sys
+import threading
 from urllib.parse import urlparse
 from urllib.error import HTTPError
-from urllib.request import Request, urlopen
+from urllib.request import HTTPRedirectHandler, Request, build_opener
 
 # ``python examples/cloudpress_loopback_broker.py`` sets sys.path[0] to the
 # examples directory. Add the repository root explicitly so the documented
@@ -31,13 +36,14 @@ if str(PROJECT_ROOT) not in sys.path:
 from src.lsfa.adapters import TerminalAdapter
 from src.lsfa.authorization import AuthorizationStore
 from src.lsfa.client import LocalClient, OperationPolicy, VerifiedConfirmation
-from src.lsfa.cloudpress_verifier import DEFAULT_PROFILE, load_record
+from src.lsfa.cloudpress_verifier import DEFAULT_PROFILE, ensure_secure_keyring, load_record
 from src.lsfa.core import FieldSpec, LSFARequest, RiskLevel
 
 
 REQUEST_ID = re.compile(r"^[A-Za-z0-9._-]{1,128}$")
 OPERATIONS = {"purge_content", "delete_user", "delete_media", "uninstall_plugin", "delete_metadata", "delete_core_term", "delete_plugin_term"}
 AGENT_CAPABILITY_SERVICE = "lsfa.cloudpress.agent-capability"
+RECOVERY_SIGNING_KEY_SERVICE = "lsfa.cloudpress.recovery-signing-key"
 COMPANION_USER_AGENT = "CloudPress-LSFA-Companion/0.2"
 FIELDS = (
     FieldSpec("summary", "multiline", "private", True),
@@ -59,6 +65,35 @@ AGENT_CAPABILITY_FIELDS = (
     FieldSpec("capability_token", "secret", "secret", True),
     FieldSpec("expires_at", "text", "private", True),
 )
+
+
+class _RejectRedirects(HTTPRedirectHandler):
+    """Never forward an authorization-bearing request to a redirect target."""
+
+    def redirect_request(self, _request, _fp, _code, _message, _headers, _newurl):
+        return None
+
+
+# urllib's default redirect handler retains Authorization across hosts. All
+# CloudPress requests can carry a bearer or one-time token, so every 3xx is a
+# fail-closed transport error instead of a follow-up request.
+urlopen = build_opener(_RejectRedirects()).open
+
+
+def validate_cloudpress_origin(origin: object) -> str:
+    """Accept exactly one HTTPS origin, never a URL with credentials or a path."""
+    if not isinstance(origin, str) or not origin or origin != origin.rstrip("/"):
+        raise ValueError("invalid_cloudpress_origin")
+    try:
+        parsed = urlparse(origin)
+        port = parsed.port
+    except ValueError as error:
+        raise ValueError("invalid_cloudpress_origin") from error
+    if (parsed.scheme != "https" or not parsed.hostname or parsed.username is not None
+            or parsed.password is not None or parsed.path or parsed.params
+            or parsed.query or parsed.fragment or port is not None and not 1 <= port <= 65535):
+        raise ValueError("invalid_cloudpress_origin")
+    return origin
 
 
 def parse_agent_capability_payload(payload: object, cloudpress_origin: str) -> tuple[LSFARequest, dict]:
@@ -84,9 +119,9 @@ def parse_agent_capability_payload(payload: object, cloudpress_origin: str) -> t
     seconds = int((expiry - datetime.now(timezone.utc)).total_seconds())
     # CloudPress is the authority that validates this bearer against its D1
     # expiry.  Permit one day of local clock skew while preserving an upper
-    # bound; a token beyond the server's seven-day record is still rejected by
+    # bound; a token beyond the server's one-day record is still rejected by
     # CloudPress and cannot grant access.
-    if not 1 <= seconds <= 8 * 24 * 60 * 60:
+    if not 1 <= seconds <= 25 * 60 * 60:
         raise ValueError("expired_or_invalid_expiry")
     summary = {"operation": "agent_access", "origin": cloudpress_origin, "expires_at": str(expires_at)}
     ticket = LSFARequest("cloudpress_agent_access", "Vincular este agente local con CloudPress hasta la fecha indicada.", AGENT_CAPABILITY_FIELDS, {"preflight": "cloudpress_capability"}, min(seconds, 300), risk=RiskLevel.HIGH, request_id=capability_id, initiator="user", presentation="terminal")
@@ -98,6 +133,10 @@ def _stored_agent_capability(cloudpress_origin: str) -> dict:
         stored = json.loads(keyring.get_password(AGENT_CAPABILITY_SERVICE, cloudpress_origin) or "")
         expiry = datetime.fromisoformat(stored["expires_at"].replace("Z", "+00:00"))
         if not isinstance(stored.get("id"), str) or not isinstance(stored.get("token"), str) or datetime.now(timezone.utc) >= expiry:
+            try:
+                keyring.delete_password(AGENT_CAPABILITY_SERVICE, cloudpress_origin)
+            except Exception:
+                pass
             return {}
         return stored
     except Exception:
@@ -149,22 +188,35 @@ def store_agent_capability(payload: object, cloudpress_origin: str) -> dict:
     return {"status": "accepted", "operation": "cloudpress_agent_access", "checks": {"stored": True}, "channel_token": channel_token}
 
 
-def agent_request_allowed(path: str, method: str) -> bool:
+RUNTIME_ACTIONS = frozenset({
+    "claim", "heartbeat", "checkpoint", "record_model_usage", "route_model",
+    "invoke_model", "write_memory", "recall_memories", "send_message",
+    "receive_messages", "delegate_task",
+})
+
+
+def agent_request_allowed(path: str, method: str, body: object = None) -> bool:
     """Mirror CloudPress' narrow, server-enforced agent capability scope."""
     route = urlparse(path).path
     plugin = r"[a-z0-9][a-z0-9-]{2,47}"
     taxonomy = r"[a-z0-9][a-z0-9-]{2,47}"
     numeric_id = r"[1-9][0-9]*"
+    # The agent runtime is not an arbitrary administrative API.  Keep its
+    # single endpoint constrained to the explicit protocol actions that the
+    # CloudPress runtime accepts; task/profile ownership and leases are still
+    # checked server-side for every action.
+    if method == "POST" and route == "/api/admin/agent-runtime":
+        return isinstance(body, dict) and body.get("action") in RUNTIME_ACTIONS
     if method == "GET":
         if route in {"/api/admin/entries", "/api/admin/users", "/api/admin/taxonomies", "/api/admin/menus", "/api/admin/plugins", "/api/admin/media", "/api/admin/plugin-schema", "/api/admin/plugin-meta", "/api/admin/blocks"}:
             return True
         return bool(re.fullmatch(fr"/api/admin/plugins/{plugin}/taxonomies/{taxonomy}", route))
     if method == "POST":
-        if route in {"/api/admin/entries", "/api/admin/taxonomies", "/api/admin/menus", "/api/admin/plugins", "/api/admin/media-agent", "/api/admin/approvals"}:
+        if route in {"/api/admin/entries", "/api/admin/taxonomies", "/api/admin/menus", "/api/admin/plugins", "/api/admin/media-agent", "/api/admin/approvals", "/api/admin/agent-execution"}:
             return True
-        return bool(re.fullmatch(fr"/api/admin/trash/{numeric_id}", route) or re.fullmatch(fr"/api/admin/plugins/{plugin}/taxonomies/{taxonomy}", route))
+        return bool(re.fullmatch(fr"/api/admin/users/{numeric_id}/active", route) or re.fullmatch(fr"/api/admin/trash/{numeric_id}", route) or re.fullmatch(fr"/api/admin/plugins/{plugin}/taxonomies/{taxonomy}", route))
     if method == "PATCH":
-        return bool(re.fullmatch(fr"/api/admin/entries/{numeric_id}", route) or re.fullmatch(fr"/api/admin/users/{numeric_id}", route) or re.fullmatch(fr"/api/admin/plugins/{plugin}", route) or re.fullmatch(r"/api/admin/media/[^/]+", route))
+        return bool(re.fullmatch(fr"/api/admin/entries/{numeric_id}", route) or re.fullmatch(fr"/api/admin/plugins/{plugin}", route) or re.fullmatch(r"/api/admin/media/[^/]+", route))
     if method == "PUT":
         if route in {"/api/admin/taxonomies", "/api/admin/menus", "/api/admin/plugin-meta"}:
             return True
@@ -180,8 +232,21 @@ def _json_response(response, fallback_status: int) -> tuple[int, object]:
         return status, {"error": "cloudpress_non_json_response", "remoteStatus": status}
 
 
+def agent_execution_headers(execution: object) -> dict[str, str]:
+    """Forward only a validated task/step binding; never caller-supplied headers."""
+    if execution is None:
+        return {}
+    if not isinstance(execution, dict):
+        raise ValueError("invalid_agent_execution")
+    task_id, ordinal = execution.get("taskId"), execution.get("ordinal")
+    if not isinstance(task_id, str) or not re.fullmatch(r"[A-Za-z0-9-]{36}", task_id) or not isinstance(ordinal, int) or not 1 <= ordinal <= 200:
+        raise ValueError("invalid_agent_execution")
+    return {"X-CloudPress-Task-Id": task_id, "X-CloudPress-Step-Ordinal": str(ordinal)}
+
+
 def agent_api_request(payload: object, cloudpress_origin: str) -> tuple[int, object]:
     """Proxy only reversible CloudPress API routes with the local capability."""
+    cloudpress_origin = validate_cloudpress_origin(cloudpress_origin)
     if not isinstance(payload, dict) or payload.get("protocol") != "lsfa" or payload.get("version") != "0.2" or payload.get("origin") != cloudpress_origin:
         raise ValueError("invalid_protocol")
     request = payload.get("request")
@@ -193,19 +258,14 @@ def agent_api_request(payload: object, cloudpress_origin: str) -> tuple[int, obj
     parsed = urlparse(path)
     if parsed.scheme or parsed.netloc or ".." in parsed.path.split("/"):
         raise ValueError("invalid_path")
-    if not agent_request_allowed(path, method):
+    if not agent_request_allowed(path, method, body):
         raise ValueError("operation_not_allowed")
-    stored = keyring.get_password(AGENT_CAPABILITY_SERVICE, cloudpress_origin)
-    try:
-        capability = json.loads(stored or "")
-        expiry = datetime.fromisoformat(capability["expires_at"].replace("Z", "+00:00"))
-        token = capability["token"]
-    except Exception as error:
-        raise ValueError("capability_unavailable") from error
-    if not isinstance(token, str) or datetime.now(timezone.utc) >= expiry:
+    capability = _stored_agent_capability(cloudpress_origin)
+    token = capability.get("token")
+    if not isinstance(token, str):
         raise ValueError("capability_expired")
     data = None if method == "GET" else json.dumps(body if isinstance(body, dict) else {}).encode("utf-8")
-    headers = {"Authorization": f"Bearer {token}", "User-Agent": COMPANION_USER_AGENT}
+    headers = {"Authorization": f"Bearer {token}", "User-Agent": COMPANION_USER_AGENT, **agent_execution_headers(request.get("execution"))}
     if data is not None:
         headers["Content-Type"] = "application/json"
     remote = Request(cloudpress_origin + path, method=method, headers=headers, data=data)
@@ -217,11 +277,13 @@ def agent_api_request(payload: object, cloudpress_origin: str) -> tuple[int, obj
 
 
 def agent_approval_payload(payload: object, cloudpress_origin: str) -> dict:
+    cloudpress_origin = validate_cloudpress_origin(cloudpress_origin)
     if not isinstance(payload, dict) or payload.get("protocol") != "lsfa" or payload.get("version") != "0.2" or payload.get("origin") != cloudpress_origin or not isinstance(payload.get("input"), dict) or not isinstance(payload.get("intent"), dict):
         raise ValueError("invalid_protocol")
-    stored = json.loads(keyring.get_password(AGENT_CAPABILITY_SERVICE, cloudpress_origin) or "")
-    token = stored.get("token")
-    remote = Request(cloudpress_origin + "/api/admin/approvals", method="POST", headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json", "User-Agent": COMPANION_USER_AGENT}, data=json.dumps(payload["input"]).encode("utf-8"))
+    token = _stored_agent_capability(cloudpress_origin).get("token")
+    if not isinstance(token, str):
+        raise ValueError("capability_expired")
+    remote = Request(cloudpress_origin + "/api/admin/approvals", method="POST", headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json", "User-Agent": COMPANION_USER_AGENT, **agent_execution_headers(payload.get("execution"))}, data=json.dumps(payload["input"]).encode("utf-8"))
     with urlopen(remote, timeout=15) as response:  # nosec B310: pinned origin and fixed endpoint
         prepared = json.loads(response.read().decode("utf-8"))
     request = {"protocol": "lsfa", "version": "0.2", "origin": cloudpress_origin, "request": {"request_id": prepared["requestId"], "operation": payload["intent"].get("operation"), "risk": prepared["risk"], "expires_at": prepared["expiresAt"], "summary": prepared["summary"]}, "execute": {"url": f"{cloudpress_origin}/api/admin/approvals/{prepared['requestId']}/execute", "token": prepared["executionToken"]}}
@@ -326,6 +388,7 @@ def verified_receipt(verifier, context, method):
 
 def build_broker(cloudpress_origin: str, verifier, store_path: Path) -> TerminalAdapter:
     """Crea una cadena LSFA fail-closed; verifier debe realizar PIN+TOTP reales."""
+    cloudpress_origin = validate_cloudpress_origin(cloudpress_origin)
     def preflight(values):
         try:
             summary = json.loads(values["summary"])
@@ -357,8 +420,16 @@ def build_broker(cloudpress_origin: str, verifier, store_path: Path) -> Terminal
     return TerminalAdapter(lambda _request: None, confirm, client=client)
 
 
-def build_recovery_broker(cloudpress_origin: str, verifier, store_path: Path) -> TerminalAdapter:
+def recovery_proof(signing_key: str, request_id: str, recovery_token: str) -> str:
+    if not isinstance(signing_key, str) or len(signing_key) < 32:
+        raise ValueError("recovery_signing_key_unavailable")
+    message = f"cloudpress-totp-recovery/v1\\n{request_id}\\n{recovery_token}".encode("utf-8")
+    return base64.b64encode(hmac.new(signing_key.encode("utf-8"), message, hashlib.sha256).digest()).decode("ascii")
+
+
+def build_recovery_broker(cloudpress_origin: str, verifier, store_path: Path, signing_key: str) -> TerminalAdapter:
     """El OTP se verifica en CloudPress; LSFA exige después el PIN local."""
+    cloudpress_origin = validate_cloudpress_origin(cloudpress_origin)
     def preflight(values):
         request = Request(values["verify_url"], method="POST", headers={"x-cloudpress-recovery-token": values["recovery_token"], "content-type": "application/json", "User-Agent": COMPANION_USER_AGENT}, data=json.dumps({"code": values.get("totp_code", ""), "recoveryCode": values.get("recovery_code", "")}).encode("utf-8"))
         with urlopen(request, timeout=15) as response:  # nosec B310: parser pins exact origin and path
@@ -366,7 +437,9 @@ def build_recovery_broker(cloudpress_origin: str, verifier, store_path: Path) ->
         return response.status == 200 and result.get("state") == "verified"
 
     def execute(values):
-        request = Request(values["execute_url"], method="POST", headers={"x-cloudpress-recovery-token": values["recovery_token"], "content-type": "application/json", "User-Agent": COMPANION_USER_AGENT}, data=json.dumps({"password": values["new_password"]}).encode("utf-8"))
+        request_id = urlparse(values["execute_url"]).path.split("/")[-2]
+        proof = recovery_proof(signing_key, request_id, values["recovery_token"])
+        request = Request(values["execute_url"], method="POST", headers={"x-cloudpress-recovery-token": values["recovery_token"], "x-cloudpress-lsfa-recovery-proof": proof, "content-type": "application/json", "User-Agent": COMPANION_USER_AGENT}, data=json.dumps({"password": values["new_password"]}).encode("utf-8"))
         with urlopen(request, timeout=15) as response:  # nosec B310: parser pins exact origin and path
             result = json.loads(response.read().decode("utf-8"))
         if response.status != 200 or result.get("state") != "used":
@@ -404,6 +477,9 @@ def load_verifier(reference: str):
 
 
 def make_handler(adapter: TerminalAdapter, recovery_adapter: TerminalAdapter, cloudpress_origin: str):
+    cloudpress_origin = validate_cloudpress_origin(cloudpress_origin)
+    confirmation_lock = threading.Lock()
+
     class Handler(BaseHTTPRequestHandler):
         def send_cors(self):
             self.send_header("Access-Control-Allow-Origin", cloudpress_origin)
@@ -445,6 +521,9 @@ def make_handler(adapter: TerminalAdapter, recovery_adapter: TerminalAdapter, cl
             if self.path in {"/v1/cloudpress/approvals", "/v1/cloudpress/agent-api", "/v1/cloudpress/agent-approvals"} and not channel_authorized(cloudpress_origin, self.headers.get("X-LSFA-Channel-Token")):
                 self.respond(401, {"status": "failed", "operation": "cloudpress_agent_access", "error_code": "invalid_channel"})
                 return
+            if self.path == "/v1/cloudpress/totp-recovery" and recovery_adapter is None:
+                self.respond(503, {"status": "failed", "operation": "cloudpress_totp_recovery", "error_code": "recovery_not_configured"})
+                return
             try:
                 length = int(self.headers.get("Content-Length", "0"))
                 if not 0 < length <= 16384:
@@ -457,14 +536,19 @@ def make_handler(adapter: TerminalAdapter, recovery_adapter: TerminalAdapter, cl
                 if self.path == "/v1/cloudpress/agent-approvals":
                     request_payload = agent_approval_payload(payload, cloudpress_origin)
                     request, values = parse_cloudpress_payload(request_payload, cloudpress_origin)
-                    self.respond(200, result_for(adapter, request, values))
+                    with confirmation_lock:
+                        self.respond(200, result_for(adapter, request, values))
                     return
                 if self.path == "/v1/cloudpress/agent-capabilities":
                     self.respond(200, store_agent_capability(payload, cloudpress_origin))
                     return
                 parser, selected = ((parse_cloudpress_payload, adapter) if self.path == "/v1/cloudpress/approvals" else (parse_recovery_payload, recovery_adapter))
                 request, values = parser(payload, cloudpress_origin)
-                self.respond(200, result_for(selected, request, values))
+                # PIN/TOTP input shares one terminal. Serialize confirmation
+                # flows so a second request cannot interleave its prompt with
+                # the currently displayed canonical summary.
+                with confirmation_lock:
+                    self.respond(200, result_for(selected, request, values))
             except ValueError as error:
                 self.respond(400, {"status": "failed", "operation": "cloudpress_irreversible_action", "error_code": str(error)})
             except Exception:
@@ -476,20 +560,48 @@ def make_handler(adapter: TerminalAdapter, recovery_adapter: TerminalAdapter, cl
     return Handler
 
 
+class BoundedLoopbackServer(ThreadingHTTPServer):
+    """Bound local resource use when an untrusted process opens slow sockets."""
+    daemon_threads = True
+    request_queue_size = 16
+
+    def __init__(self, *args, max_workers=8, **kwargs):
+        self._slots = threading.BoundedSemaphore(max_workers)
+        super().__init__(*args, **kwargs)
+
+    def process_request(self, request, client_address):
+        if not self._slots.acquire(blocking=False):
+            request.close()
+            return
+        super().process_request(request, client_address)
+
+    def process_request_thread(self, request, client_address):
+        try:
+            request.settimeout(15)
+            super().process_request_thread(request, client_address)
+        finally:
+            self._slots.release()
+
+
 def main():
     parser = argparse.ArgumentParser(description="LSFA loopback companion for CloudPress")
     parser.add_argument("--origin", required=True, help="Exact CloudPress origin, e.g. https://cms.example")
     parser.add_argument("--verifier", required=True, help="Trusted local verifier as module:function")
     parser.add_argument("--store", default="cloudpress-lsfa-authorizations.sqlite3")
+    parser.add_argument("--port", type=int, default=9463, choices=range(1024, 65536), metavar="PORT")
     args = parser.parse_args()
-    origin = args.origin.rstrip("/")
-    parsed = urlparse(origin)
-    if parsed.scheme != "https" or not parsed.netloc or parsed.path:
+    try:
+        origin = validate_cloudpress_origin(args.origin)
+    except ValueError:
         raise SystemExit("--origin must be an exact HTTPS origin without a path")
     verifier = load_verifier(args.verifier)
+    ensure_secure_keyring()
     adapter = build_broker(origin, verifier, Path(args.store))
-    recovery_adapter = build_recovery_broker(origin, verifier, Path(args.store))
-    ThreadingHTTPServer(("127.0.0.1", 9463), make_handler(adapter, recovery_adapter, origin)).serve_forever()
+    signing_key = os.environ.get("CLOUDPRESS_LSFA_RECOVERY_SIGNING_KEY", "") or keyring.get_password(RECOVERY_SIGNING_KEY_SERVICE, origin) or ""
+    recovery_adapter = build_recovery_broker(origin, verifier, Path(args.store), signing_key) if len(signing_key) >= 32 else None
+    if recovery_adapter is None:
+        print("Recuperación TOTP deshabilitada: configura CLOUDPRESS_LSFA_RECOVERY_SIGNING_KEY para habilitarla.")
+    BoundedLoopbackServer(("127.0.0.1", args.port), make_handler(adapter, recovery_adapter, origin)).serve_forever()
 
 
 if __name__ == "__main__":

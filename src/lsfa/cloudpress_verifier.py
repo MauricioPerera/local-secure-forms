@@ -10,7 +10,6 @@ from __future__ import annotations
 import argparse
 import base64
 from datetime import datetime, timezone
-import getpass
 import hashlib
 import hmac
 import json
@@ -28,6 +27,7 @@ DEFAULT_PROFILE = "default"
 PIN_COST = 2**15
 PIN_BLOCK_SIZE = 8
 PIN_PARALLELISM = 1
+MIN_LOCAL_PASSPHRASE_LENGTH = 12
 
 
 def validate_profile(profile: str) -> str:
@@ -37,7 +37,7 @@ def validate_profile(profile: str) -> str:
 
 
 def derive_pin(pin: str, salt: bytes) -> bytes:
-    if not isinstance(pin, str) or len(pin) < 6 or len(pin) > 256 or not isinstance(salt, bytes) or len(salt) != 32:
+    if not isinstance(pin, str) or len(pin) < MIN_LOCAL_PASSPHRASE_LENGTH or len(pin) > 256 or not isinstance(salt, bytes) or len(salt) != 32:
         raise ValueError("invalid_pin")
     return hashlib.scrypt(pin.encode("utf-8"), salt=salt, n=PIN_COST,
                           r=PIN_BLOCK_SIZE, p=PIN_PARALLELISM,
@@ -103,6 +103,16 @@ def load_record(profile: str, backend=keyring) -> dict:
     return decode_record(raw)
 
 
+def ensure_secure_keyring(backend=keyring) -> None:
+    """Reject known plaintext, null and unavailable credential backends."""
+    active = backend.get_keyring() if hasattr(backend, "get_keyring") else backend
+    identity = f"{type(active).__module__}.{type(active).__name__}".lower()
+    allowed = ("keyring.backends.windows.", "keyring.backends.macos.",
+               "keyring.backends.secretservice.", "keyring.backends.kwallet.")
+    if not identity.startswith(allowed):
+        raise RuntimeError("secure_keyring_required")
+
+
 def verifier_for_profile(profile: str = DEFAULT_PROFILE):
     """Return a broker-compatible verifier bound to one enrolled profile."""
     profile = validate_profile(profile)
@@ -114,17 +124,8 @@ def verifier_for_profile(profile: str = DEFAULT_PROFILE):
             return None
         try:
             record = load_record(profile)
-            rendered = json.dumps(summary, ensure_ascii=True, sort_keys=True, indent=2)
-            print("\nCloudPress solicita confirmar esta acción:\n" + rendered)
-            if input("Escribe APROBAR para continuar: ") != "APROBAR":
+            if not local_approval_dialog(summary, method, record):
                 return None
-            pin = getpass.getpass("PIN local: ")
-            if not hmac.compare_digest(derive_pin(pin, record["salt"]), record["pin_hash"]):
-                return None
-            if method == "pin_and_totp":
-                code = getpass.getpass("Código del autenticador local: ")
-                if not verify_totp(record["totp_secret"], code):
-                    return None
             return VerifiedConfirmation(binding, method, min(expires_at, time.time() + 60))
         except Exception:
             return None
@@ -163,14 +164,156 @@ def show_qr(secret: str, profile: str) -> None:
     root.mainloop()
 
 
+def local_secret_dialog(title: str, prompt: str, *, secret: bool = True) -> str | None:
+    """Collect one local factor in a modal GUI instead of an invisible shell."""
+    try:
+        import tkinter as tk
+        from tkinter import simpledialog
+    except ImportError as error:
+        raise RuntimeError("gui_support_unavailable") from error
+    root = tk.Tk()
+    root.withdraw()
+    root.attributes("-topmost", True)
+    try:
+        return simpledialog.askstring(title, prompt, parent=root, show="•" if secret else "")
+    finally:
+        root.destroy()
+
+
+def approval_summary(summary: object) -> str:
+    """Render the server-attested target as a concise human review, never raw JSON."""
+    if not isinstance(summary, dict):
+        return "CloudPress no proporcionó un resumen verificable de la acción."
+    operations = {
+        "purge_content": "Eliminar permanentemente contenido de la Papelera",
+        "delete_user": "Eliminar permanentemente una cuenta de usuario",
+        "delete_media": "Eliminar permanentemente un archivo multimedia",
+        "uninstall_plugin": "Desinstalar un plugin",
+        "delete_metadata": "Eliminar un valor de metadatos",
+        "delete_core_term": "Eliminar un término de taxonomía",
+        "delete_plugin_term": "Eliminar un término de plugin",
+    }
+    labels = {
+        "id": "ID", "title": "Título", "username": "Usuario", "role": "Rol",
+        "key": "Archivo", "size": "Tamaño", "scope": "Ámbito", "entityId": "Entidad",
+        "pluginId": "Plugin", "taxonomyId": "Taxonomía", "name": "Nombre", "slug": "Slug",
+        "contentReferences": "Contenido vinculado", "policy": "Política",
+    }
+    operation = summary.get("operation")
+    target = summary.get("target")
+    lines = [f"Acción: {operations.get(operation, 'Acción irreversible de CloudPress')}", "", "Destino confirmado por CloudPress:"]
+    if isinstance(target, dict) and target:
+        for key, value in target.items():
+            if value is not None:
+                lines.append(f"• {labels.get(key, key)}: {value}")
+    else:
+        lines.append("• No hay detalles de destino disponibles.")
+    lines.extend(("", "Esta acción no se puede deshacer."))
+    return "\n".join(lines)
+
+
+def local_approval_dialog(summary: object, method: str, record: dict) -> bool:
+    """Show one roomy local approval form; factors never leave this process."""
+    try:
+        import tkinter as tk
+        from tkinter import ttk
+    except ImportError as error:
+        raise RuntimeError("gui_support_unavailable") from error
+    root = tk.Tk()
+    root.title("CloudPress — Confirmación local requerida")
+    root.minsize(720, 520)
+    root.geometry("780x600")
+    root.attributes("-topmost", True)
+    root.configure(bg="#f4f7fb")
+    approved = False
+    try:
+        frame = ttk.Frame(root, padding=24)
+        frame.pack(fill="both", expand=True)
+        ttk.Label(frame, text="Confirmar acción irreversible", font=("Segoe UI", 18, "bold")).pack(anchor="w")
+        ttk.Label(frame, text="Revisa el destino. CloudPress no ejecutará esta acción sin tus factores locales.", wraplength=700).pack(anchor="w", pady=(6, 16))
+        details = tk.Text(frame, height=12, wrap="word", font=("Segoe UI", 11), padx=12, pady=12, relief="solid", borderwidth=1)
+        details.insert("1.0", approval_summary(summary))
+        details.configure(state="disabled", background="#ffffff", foreground="#172033")
+        details.pack(fill="both", expand=True)
+        understood = tk.BooleanVar(value=False)
+        ttk.Checkbutton(frame, text="Entiendo que esta acción no se puede deshacer.", variable=understood).pack(anchor="w", pady=(16, 8))
+        fields = ttk.Frame(frame)
+        fields.pack(fill="x")
+        ttk.Label(fields, text="Contraseña local:").grid(row=0, column=0, sticky="w", pady=5)
+        pin = ttk.Entry(fields, show="•", width=42)
+        pin.grid(row=0, column=1, sticky="ew", padx=(12, 0), pady=5)
+        code = None
+        if method == "pin_and_totp":
+            ttk.Label(fields, text="Código del autenticador:").grid(row=1, column=0, sticky="w", pady=5)
+            code = ttk.Entry(fields, width=18)
+            code.grid(row=1, column=1, sticky="w", padx=(12, 0), pady=5)
+        fields.columnconfigure(1, weight=1)
+        feedback = ttk.Label(frame, foreground="#b42318")
+        feedback.pack(anchor="w", pady=(8, 0))
+        buttons = ttk.Frame(frame)
+        buttons.pack(fill="x", pady=(16, 0))
+
+        def cancel() -> None:
+            root.destroy()
+
+        def submit() -> None:
+            nonlocal approved
+            if not understood.get():
+                feedback.configure(text="Confirma que entiendes que la acción es irreversible.")
+                return
+            try:
+                pin_ok = hmac.compare_digest(derive_pin(pin.get(), record["salt"]), record["pin_hash"])
+            except Exception:
+                pin_ok = False
+            if not pin_ok:
+                pin.delete(0, "end")
+                feedback.configure(text="La contraseña local no coincide.")
+                pin.focus_set()
+                return
+            if method == "pin_and_totp" and (code is None or not verify_totp(record["totp_secret"], code.get())):
+                if code is not None:
+                    code.delete(0, "end")
+                    code.focus_set()
+                feedback.configure(text="El código del autenticador no es válido.")
+                return
+            approved = True
+            root.destroy()
+
+        ttk.Button(buttons, text="Cancelar", command=cancel).pack(side="right")
+        ttk.Button(buttons, text="Aprobar acción", command=submit).pack(side="right", padx=(0, 10))
+        root.protocol("WM_DELETE_WINDOW", cancel)
+        pin.focus_set()
+        root.mainloop()
+    finally:
+        try:
+            root.destroy()
+        except tk.TclError:
+            pass
+    return approved
+
+
 def enroll(profile: str = DEFAULT_PROFILE, backend=keyring) -> None:
     profile = validate_profile(profile)
-    pin = getpass.getpass("Crea un PIN local (mínimo 6 caracteres): ")
-    if pin != getpass.getpass("Confirma el PIN local: "):
+    if backend is keyring:
+        ensure_secure_keyring()
+    pin = local_secret_dialog("CloudPress LSFA", f"Crea una contraseña local (mínimo {MIN_LOCAL_PASSPHRASE_LENGTH} caracteres):")
+    if pin is None:
+        raise ValueError("enrollment_cancelled")
+    confirmation = local_secret_dialog("CloudPress LSFA", "Confirma la contraseña local:")
+    if confirmation is None:
+        raise ValueError("enrollment_cancelled")
+    if not hmac.compare_digest(pin, confirmation):
         raise ValueError("pin_mismatch")
+    # Validate before generating or displaying a QR. A failed enrolment must
+    # never leave the user with an unpersisted authenticator seed.
+    if len(pin) < MIN_LOCAL_PASSPHRASE_LENGTH:
+        raise ValueError("local_password_too_short")
     secret = new_totp_secret()
     show_qr(secret, profile)
-    if not verify_totp(secret, getpass.getpass("Código del autenticador local: ")):
+    code = local_secret_dialog("CloudPress LSFA", "Introduce el código de seis dígitos de tu autenticador:", secret=False)
+    if code is None:
+        raise ValueError("enrollment_cancelled")
+    if not verify_totp(secret, code):
         raise ValueError("totp_not_verified")
     backend.set_password(SERVICE, profile, encode_record(pin, secret))
 
@@ -180,7 +323,17 @@ def main() -> None:
     parser.add_argument("command", choices=("enroll",))
     parser.add_argument("--profile", default=DEFAULT_PROFILE)
     args = parser.parse_args()
-    enroll(args.profile)
+    ensure_secure_keyring()
+    try:
+        enroll(args.profile)
+    except ValueError as error:
+        if str(error) == "pin_mismatch":
+            raise SystemExit("Las contraseñas locales no coinciden. No se modificó el enrolamiento; vuelve a intentarlo.") from None
+        if str(error) == "local_password_too_short":
+            raise SystemExit(f"La contraseña local debe tener al menos {MIN_LOCAL_PASSPHRASE_LENGTH} caracteres. No se modificó el enrolamiento.") from None
+        if str(error) == "enrollment_cancelled":
+            raise SystemExit("El enrolamiento se canceló. No se modificó ningún factor.") from None
+        raise
     print("Factores locales configurados.")
 
 

@@ -61,13 +61,13 @@ def test_agent_status_reports_enrollment_without_exposing_capability(monkeypatch
 
 
 def test_agent_capability_allows_bounded_clock_skew():
-    expires = (datetime.now(timezone.utc) + timedelta(days=7, hours=12)).isoformat()
+    expires = (datetime.now(timezone.utc) + timedelta(hours=24, minutes=30)).isoformat()
     payload = {"protocol": "lsfa", "version": "0.2", "origin": "https://cms.example", "capability": {"id": "capability-qa-0002", "token": "A" * 44, "expires_at": expires}}
     assert BROKER.parse_agent_capability_payload(payload, "https://cms.example")[0].operation == "cloudpress_agent_access"
 
 
 def test_agent_proxy_identifies_the_companion(monkeypatch):
-    monkeypatch.setattr(BROKER.keyring, "get_password", lambda _service, _origin: json.dumps({"token": "A" * 44, "expires_at": (datetime.now(timezone.utc) + timedelta(days=1)).isoformat()}))
+    monkeypatch.setattr(BROKER.keyring, "get_password", lambda _service, _origin: json.dumps({"id": "capability-qa", "token": "A" * 44, "expires_at": (datetime.now(timezone.utc) + timedelta(days=1)).isoformat()}))
     captured = {}
     class Response:
         status = 200
@@ -135,7 +135,7 @@ def test_totp_recovery_requires_server_otp_then_local_pin(monkeypatch, tmp_path)
         return BROKER.VerifiedConfirmation(binding, method, expires_at)
 
     monkeypatch.setattr(BROKER, "urlopen", lambda request, timeout: Response())
-    result = BROKER.result_for(BROKER.build_recovery_broker("https://cms.example", verifier, tmp_path / "recovery.sqlite3"), request, values)
+    result = BROKER.result_for(BROKER.build_recovery_broker("https://cms.example", verifier, tmp_path / "recovery.sqlite3", "test-lsfa-recovery-signing-key-at-least-32"), request, values)
     assert result["status"] == "accepted"
     assert result["checks"] == {"recovered": True}
     assert seen == [({"operation": "recover_account", "username": "admin"}, "pin")]
