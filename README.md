@@ -65,6 +65,12 @@ python scripts/run_cloudpress_agent.py --origin https://cms.example
 
 Para una comprobación sin daemon, usa `--once`. El runner sólo ejecuta una mutación cuando el plan ya contiene una solicitud limitada (`input.request`) y autorizada por el contrato del paso. Un paso sensible se detiene en `waiting_approval`: la aprobación A2F permanece fuera del runner. Configurar un modelo en el catálogo de CloudPress no inicia este proceso ni habilita inferencia por sí solo.
 
+En Windows, inicia ambos procesos con una sola orden. El runner se cierra automáticamente al detener el companion, mientras el companion sigue visible para capturar A2F cuando CloudPress lo requiera:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\start-cloudpress-agent.ps1
+```
+
 El enrolamiento abre un QR local para vincular una aplicación autenticadora y guarda la semilla TOTP y el verificador scrypt de una contraseña local de al menos 12 caracteres mediante el almacén seguro del sistema operativo. El companion rechaza backends de keyring no seguros. El QR y la semilla no se imprimen, almacenan en archivos temporales ni regresan al agente. El verificador muestra el resumen canónico, exige escribir `APROBAR`, solicita la contraseña local para riesgo alto y contraseña + TOTP para acciones irreversibles. Devuelve `VerifiedConfirmation(binding, method, expires_at)` sólo después de validar esos factores; un `True`, una cadena o un JSON no son confirmación válida.
 
 El mismo companion atiende la recuperación TOTP de CloudPress en la ruta loopback /v1/cloudpress/totp-recovery. CloudPress verifica primero el código de Google Authenticator o un código de respaldo; sólo entonces LSFA solicita el PIN local (riesgo high) y ejecuta el restablecimiento de contraseña ligado a la solicitud. El companion firma la solicitud y CloudPress comprueba esa prueba HMAC antes de cambiar la contraseña. `CLOUDPRESS_LSFA_RECOVERY_SIGNING_KEY` debe coincidir exactamente con `LSFA_RECOVERY_SIGNING_KEY` configurada en Pages. Los códigos, contraseñas y tokens no se devuelven al agente.
